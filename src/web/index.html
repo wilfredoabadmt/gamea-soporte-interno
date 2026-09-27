@@ -51,7 +51,7 @@
           <span>Copiloto Asistente IA</span>
         </div>
         <div class="nav-item admin-only" id="btn-config-agente">
-          <span>⚙ Entrenamiento Agente IA</span>
+          <span>🧠 Conocimiento y Acciones IA</span>
         </div>
       </nav>
     </aside>
@@ -300,48 +300,74 @@
     </div>
   </div>
 
-  <!-- Modal: Entrenamiento y Configuración de Agente OpenRouter -->
+  <!-- Modal: Centro de Conocimiento, Acciones y Configuración del Agente IA -->
   <div class="modal-overlay" id="modal-entrenamiento-agente">
-    <div class="modal-card" style="max-width: 680px;">
+    <div class="modal-card" style="max-width: 760px; max-height: 90vh; display: flex; flex-direction: column;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="color: #25D366; font-size: 1.3rem;">⚡</span>
-          <h3>Entrenamiento y Conexión de Agente IA (OpenRouter)</h3>
+          <span style="color: #25D366; font-size: 1.4rem;">🧠</span>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem;">Centro de Conocimiento y Protocolos de Acción del Agente IA</h3>
+            <span style="font-size: 0.78rem; color: var(--color-text-muted);">Configuración de directrices, entrenamiento operativo y conexión OpenRouter</span>
+          </div>
         </div>
         <button class="modal-close-btn" onclick="window.cerrarModales()">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>OpenRouter API Key</label>
-          <input type="password" class="form-input" id="agent-api-key" placeholder="sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
-          <span style="font-size: 0.75rem; color: var(--color-text-muted);">Tu clave se almacena de forma segura en tu navegador (Local Storage) y no se expone a terceros.</span>
+
+      <div class="modal-body" style="overflow-y: auto; padding-right: 0.5rem;">
+        <!-- Banner de detección de .env del Servidor -->
+        <div id="env-status-banner" style="background: rgba(27, 77, 126, 0.25); border: 1px solid var(--color-accent); border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span>📁 <strong>Archivo .env:</strong></span>
+            <span id="env-status-text">Verificando configuración en servidor...</span>
+          </div>
+          <span class="badge-tag" id="env-status-badge" style="background: var(--color-bg-base); font-size: 0.75rem;">Detectando</span>
         </div>
-        <div class="form-group">
-          <label>Modelo LLM de OpenRouter</label>
-          <select class="form-select" id="agent-model-select">
-            <option value="anthropic/claude-3.5-sonnet">Anthropic: Claude 3.5 Sonnet (Recomendado)</option>
-            <option value="openai/gpt-4o">OpenAI: GPT-4o</option>
-            <option value="google/gemini-2.0-flash-001">Google: Gemini 2.0 Flash</option>
-            <option value="meta-llama/llama-3.3-70b-instruct">Meta: Llama 3.3 70B Instruct</option>
-            <option value="deepseek/deepseek-chat">DeepSeek: DeepSeek V3</option>
-          </select>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label>OpenRouter API Key (Personal o Sobrescritura)</label>
+            <input type="password" class="form-input" id="agent-api-key" placeholder="sk-or-v1-... (o dejar vacío para usar el .env)">
+            <span style="font-size: 0.72rem; color: var(--color-text-muted);">Si dejas este campo vacío, el sistema usará automáticamente la clave configurada en el archivo <code>.env</code>.</span>
+          </div>
+          <div class="form-group">
+            <label>Modelo LLM de OpenRouter</label>
+            <select class="form-select" id="agent-model-select">
+              <option value="anthropic/claude-3.5-sonnet">Anthropic: Claude 3.5 Sonnet (Recomendado)</option>
+              <option value="openai/gpt-4o">OpenAI: GPT-4o</option>
+              <option value="google/gemini-2.0-flash-001">Google: Gemini 2.0 Flash</option>
+              <option value="meta-llama/llama-3.3-70b-instruct">Meta: Llama 3.3 70B Instruct</option>
+              <option value="deepseek/deepseek-chat">DeepSeek: DeepSeek V3</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
-          <label>Prompt del Sistema (System Prompt / Identidad del Agente)</label>
-          <textarea class="form-textarea" style="min-height: 90px;" id="agent-system-prompt" placeholder="Define el rol y comportamiento institucional del agente..."></textarea>
+          <label>Identidad y Tono de Atención al Funcionario (System Prompt)</label>
+          <textarea class="form-textarea" style="min-height: 80px;" id="agent-system-prompt" placeholder="Define el rol y cómo debe dirigirse a los funcionarios municipales..."></textarea>
         </div>
+
         <div class="form-group">
-          <label>Instrucciones de Entrenamiento y Contexto Municipal (Normativa, SLAs y Respuestas)</label>
-          <textarea class="form-textarea" style="min-height: 110px;" id="agent-training-context" placeholder="Ingresa reglas, reglamentos y directrices institucionales que el agente debe seguir obligatoriamente..."></textarea>
+          <label>Base de Conocimiento Institucional (Normativas, Reglamentos, Guías de Trámite)</label>
+          <textarea class="form-textarea" style="min-height: 110px;" id="agent-training-context" placeholder="Ingresa normativas, resoluciones, manuales y directrices que el agente debe dominar..."></textarea>
+          <span style="font-size: 0.72rem; color: var(--color-text-muted);">El agente utilizará esta base documental para sustentar cada una de sus respuestas.</span>
         </div>
+
         <div class="form-group">
-          <label>Temperatura (Creatividad vs Precisión: 0.0 a 1.0)</label>
+          <label>⚡ Protocolos de Acción y Pautas de Atención (Cómo resolver cada situación)</label>
+          <textarea class="form-textarea" style="min-height: 110px;" id="agent-actions-protocol" placeholder="Define las acciones automáticas: cuándo clasificar URGENTE, cuándo sugerir derivación técnica, cómo saludar, qué datos solicitar obligatoriamente al funcionario..."></textarea>
+          <span style="font-size: 0.72rem; color: var(--color-text-muted);">Establece pasos mandatorios: por ejemplo, solicitar C.I., número de oficina, tipificar el error o indicar tiempos de SLA.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Temperatura (Control de Creatividad: 0.1 estricto - 0.7 asistido)</label>
           <input type="number" step="0.1" min="0" max="1" class="form-input" id="agent-temperature" value="0.3">
         </div>
       </div>
-      <div class="modal-footer">
+
+      <div class="modal-footer" style="margin-top: 1rem;">
         <button class="btn-secondary" onclick="window.cerrarModales()">Cancelar</button>
-        <button class="btn-accent" onclick="window.guardarConfiguracionAgente()">Guardar Parámetros de Entrenamiento</button>
+        <button class="btn-accent" onclick="window.guardarConfiguracionAgente()">Guardar Conocimiento y Protocolos</button>
       </div>
     </div>
   </div>

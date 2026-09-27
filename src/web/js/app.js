@@ -817,16 +817,18 @@ window.ejecutarAnalisisIA = function() {
     }
   });
 
-  cargarParametrosEntrenamiento();
+  verificarConfiguracionEnvServidor().then(() => {
+    cargarParametrosEntrenamiento();
+  });
 }
 
 // ============================================================================
-// LÓGICA DE AGENTE INTELIGENTE WHATSAPP & API OPENROUTER
+// LÓGICA DE AGENTE INTELIGENTE WHATSAPP & API OPENROUTER / .ENV
 // ============================================================================
 
 const DEFAULT_SYSTEM_PROMPT = `Eres el Agente Inteligente de Soporte Interno del Gobierno Autónomo Municipal de El Alto (GAMEA).
 Tu función es orientar a los funcionarios municipales en procedimientos administrativos, normativas internas, soporte técnico de sistemas, derivaciones entre unidades y seguimiento de casos.
-Debes responder con tono formal, institucional, claro y respetuoso. Si no tienes certeza de un procedimiento o normativa, debes recomendar la derivación o elevación a revisión humana conforme a la Constitución del GAMEA.`;
+Debes responder con tono formal, institucional, claro, empático y respetuoso. Cumple rigurosamente los protocolos de acción y conocimiento establecidos.`;
 
 const DEFAULT_TRAINING_CONTEXT = `[BASE DE CONOCIMIENTO INSTITUCIONAL GAMEA]
 1. REGLAMENTO DE MAQUINARIA (RES-ADM-GAMEA-045/2025): Toda solicitud distrital de maquinaria pesada debe ser solicitada con al menos 72 horas de anticipación con visto bueno del Subalcalde.
@@ -835,21 +837,76 @@ const DEFAULT_TRAINING_CONTEXT = `[BASE DE CONOCIMIENTO INSTITUCIONAL GAMEA]
 4. LAS 14 SUBALCALDÍAS: El Alto cuenta con 14 Distritos Municipales (D-1 a D-14), con bandejas operativas autónomas pero coordinadas.
 5. PRINCIPIO DE RESPONSABILIDAD: La IA no aprueba gastos ni emite sanciones administrativas; asiste y asesora a los servidores públicos.`;
 
+const DEFAULT_ACTIONS_PROTOCOL = `[PAUTAS DE ATENCIÓN Y PROTOCOLOS DE ACCIÓN]:
+1. SALUDO INICIAL: Saluda cordialmente mencionando la institución ("Gobierno Autónomo Municipal de El Alto").
+2. IDENTIFICACIÓN DE CASO: Si el funcionario reporta un problema, solicita siempre:
+   - Unidad / Dirección o Subalcaldía de origen.
+   - Cédula de Identidad o código de caso si ya fue registrado.
+   - Breve descripción del incidente o solicitud.
+3. TIPIFICACIÓN DE PRIORIDAD:
+   - PRIORIDAD URGENTE: Si afecta sistemas tributarios (RUAT), caja municipal o corte masivo de enlace.
+   - PRIORIDAD ALTA: Si afecta a directores, secretarios o procesos con plazo fatal legal.
+   - PRIORIDAD MEDIA/BAJA: Consultas de procedimiento, configuración menor o provisión habitual de materiales.
+4. ACCIÓN DE DERIVACIÓN: Cuando la solicitud no corresponda a TI, indica textualmente a qué dependencia debe derivarse formalmente en el sistema (ej. DIR-INFRAESTRUCTURA, DIR-JURIDICA).
+5. ESCALAMIENTO HUMANO OBLIGATORIO: Ante incidentes de seguridad de información o dudas normativas sin respaldo, aconseja de inmediato elevar el requerimiento a supervisión técnica humana.`;
+
+let serverEnvConfig = {
+  hasServerApiKey: false,
+  defaultModel: 'anthropic/claude-3.5-sonnet',
+  keyPreview: ''
+};
+
+async function verificarConfiguracionEnvServidor() {
+  try {
+    const res = await fetch('/api/v1/config/agent');
+    if (res.ok) {
+      serverEnvConfig = await res.json();
+      actualizarBannerEnv();
+    }
+  } catch (e) {
+    console.warn('[GAMEA] No se pudo consultar configuración .env:', e);
+  }
+}
+
+function actualizarBannerEnv() {
+  const textEl = document.getElementById('env-status-text');
+  const badgeEl = document.getElementById('env-status-badge');
+  if (!textEl || !badgeEl) return;
+
+  if (serverEnvConfig.hasServerApiKey) {
+    textEl.innerHTML = `Detectada <code>OPENROUTER_API_KEY</code> en <code>.env</code> (${serverEnvConfig.keyPreview}). El agente está activo para todos los usuarios.`;
+    badgeEl.textContent = 'Activo (.env)';
+    badgeEl.style.backgroundColor = 'rgba(74, 222, 128, 0.2)';
+    badgeEl.style.color = 'var(--color-status-resuelto)';
+  } else {
+    textEl.innerHTML = `No se detectó clave en el archivo <code>.env</code>. Puedes colocar tu clave aquí o editar el archivo <code>.env</code> en el servidor.`;
+    badgeEl.textContent = 'Sin clave en .env';
+    badgeEl.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+    badgeEl.style.color = '#ef4444';
+  }
+}
+
 function cargarParametrosEntrenamiento() {
   const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || 'anthropic/claude-3.5-sonnet';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'anthropic/claude-3.5-sonnet';
   const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;
   const temp = localStorage.getItem('gamea_agent_temperature') || '0.3';
 
   if (document.getElementById('agent-api-key')) document.getElementById('agent-api-key').value = apiKey;
   if (document.getElementById('agent-model-select')) document.getElementById('agent-model-select').value = model;
   if (document.getElementById('agent-system-prompt')) document.getElementById('agent-system-prompt').value = sysPrompt;
   if (document.getElementById('agent-training-context')) document.getElementById('agent-training-context').value = context;
+  if (document.getElementById('agent-actions-protocol')) document.getElementById('agent-actions-protocol').value = actions;
   if (document.getElementById('agent-temperature')) document.getElementById('agent-temperature').value = temp;
 
+  actualizarBannerEnv();
+
   if (document.getElementById('chat-model-indicator')) {
-    document.getElementById('chat-model-indicator').textContent = apiKey ? `OpenRouter: ${model.split('/')[1] || model}` : 'Agente GAMEA (Modo Local)';
+    const isConnected = apiKey || serverEnvConfig.hasServerApiKey;
+    const modelName = model.split('/')[1] || model;
+    document.getElementById('chat-model-indicator').textContent = isConnected ? `OpenRouter: ${modelName}` : 'Agente GAMEA (Modo Base)';
   }
 }
 
@@ -858,17 +915,19 @@ window.guardarConfiguracionAgente = function() {
   const model = document.getElementById('agent-model-select').value;
   const sysPrompt = document.getElementById('agent-system-prompt').value.trim();
   const context = document.getElementById('agent-training-context').value.trim();
+  const actions = document.getElementById('agent-actions-protocol').value.trim();
   const temp = document.getElementById('agent-temperature').value;
 
   localStorage.setItem('gamea_openrouter_api_key', apiKey);
   localStorage.setItem('gamea_agent_model', model);
   localStorage.setItem('gamea_agent_sys_prompt', sysPrompt);
   localStorage.setItem('gamea_agent_context', context);
+  localStorage.setItem('gamea_agent_actions', actions);
   localStorage.setItem('gamea_agent_temperature', temp);
 
   cargarParametrosEntrenamiento();
   window.cerrarModales();
-  alert('[GAMEA] Parámetros de entrenamiento y credenciales de OpenRouter guardados correctamente.');
+  alert('[GAMEA] Base de Conocimiento, Protocolos de Acción y configuración guardados correctamente.');
 };
 
 window.toggleWhatsAppChat = function() {
@@ -899,18 +958,21 @@ window.enviarMensajeChat = async function() {
   // Burbuja de respuesta (cargando)
   const botBubble = document.createElement('div');
   botBubble.className = 'chat-bubble bot';
-  botBubble.innerHTML = `<em>Escribiendo respuesta institucional...</em><div class="chat-bubble-time">${ahora}</div>`;
+  botBubble.innerHTML = `<em>Escribiendo respuesta institucional conforme a protocolos...</em><div class="chat-bubble-time">${ahora}</div>`;
   messagesContainer.appendChild(botBubble);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-  const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || 'anthropic/claude-3.5-sonnet';
+  const localApiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'anthropic/claude-3.5-sonnet';
   const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;
   const temp = parseFloat(localStorage.getItem('gamea_agent_temperature') || '0.3');
 
-  if (!apiKey) {
-    // Modo simulación asistida si el usuario aún no configuró su API Key de OpenRouter
+  const tieneKey = localApiKey || serverEnvConfig.hasServerApiKey;
+
+  if (!tieneKey) {
+    // Modo simulación asistida si no hay clave en cliente ni en .env
     setTimeout(() => {
       let respuestaSimulada = '';
       const t = texto.toLowerCase();
@@ -919,7 +981,7 @@ window.enviarMensajeChat = async function() {
       } else if (t.includes('red') || t.includes('fibra') || t.includes('internet')) {
         respuestaSimulada = 'Los reportes de conectividad y enlaces de fibra óptica son clasificados con prioridad ALTA en la Dirección de Tecnologías e Información, con un SLA de respuesta máxima de 4 horas.';
       } else {
-        respuestaSimulada = `He recibido su consulta: "<em>${escapeHTML(texto)}</em>". Para activar respuestas en tiempo real con modelos como Claude 3.5 Sonnet, GPT-4o o Gemini 2.0 Flash, configure su clave en el icono ⚙ del chat.`;
+        respuestaSimulada = `He recibido su consulta: "<em>${escapeHTML(texto)}</em>". Para activar respuestas en tiempo real con modelos como Claude 3.5 Sonnet, GPT-4o o Gemini 2.0 Flash, configure su clave en el archivo <code>.env</code> o en el botón ⚙ del chat.`;
       }
 
       botBubble.innerHTML = `${respuestaSimulada}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
@@ -928,43 +990,70 @@ window.enviarMensajeChat = async function() {
     return;
   }
 
-  // LLAMADA REAL A LA API DE OPENROUTER
+  // Ejecución contra la API (si hay localApiKey se conecta directo a OpenRouter, o vía backend /api/v1/agent/chat si está en .env)
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'GAMEA Soporte Interno'
+    let botText = '';
+    const messagesPayload = [
+      {
+        role: 'system',
+        content: `${sysPrompt}\n\n${context}\n\n${actions}`
       },
-      body: JSON.stringify({
-        model: model,
-        temperature: temp,
-        messages: [
-          {
-            role: 'system',
-            content: `${sysPrompt}\n\n[CONTEXTO DE ENTRENAMIENTO Y DIRECTRICES INSTITUCIONALES]:\n${context}`
-          },
-          {
-            role: 'user',
-            content: texto
-          }
-        ]
-      })
-    });
+      {
+        role: 'user',
+        content: texto
+      }
+    ];
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `Error HTTP ${response.status} en OpenRouter`);
+    if (localApiKey) {
+      // Conexión directa a OpenRouter con clave local
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'GAMEA Soporte Interno'
+        },
+        body: JSON.stringify({
+          model: model,
+          temperature: temp,
+          messages: messagesPayload
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Error HTTP ${response.status} en OpenRouter`);
+      }
+
+      const data = await response.json();
+      botText = data.choices?.[0]?.message?.content || 'No se obtuvo respuesta del modelo de IA.';
+    } else {
+      // Conexión segura usando la clave del archivo .env a través del backend
+      const response = await fetch('/api/v1/agent/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: model,
+          temperature: temp,
+          messages: messagesPayload
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Error HTTP ${response.status} en servidor`);
+      }
+
+      const data = await response.json();
+      botText = data.choices?.[0]?.message?.content || 'No se obtuvo respuesta del modelo de IA.';
     }
-
-    const data = await response.json();
-    const botText = data.choices?.[0]?.message?.content || 'No se obtuvo respuesta del modelo de IA.';
 
     botBubble.innerHTML = `${escapeHTML(botText).replace(/\n/g, '<br>')}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
   } catch (error) {
-    botBubble.innerHTML = `<span style="color: #ef4444;"><strong>Error OpenRouter:</strong> ${escapeHTML(error.message)}</span><div class="chat-bubble-time">${ahora}</div>`;
+    botBubble.innerHTML = `<span style="color: #ef4444;"><strong>Error de Conexión:</strong> ${escapeHTML(error.message)}</span><div class="chat-bubble-time">${ahora}</div>`;
   }
 
   messagesContainer.scrollTop = messagesContainer.scrollHeight;

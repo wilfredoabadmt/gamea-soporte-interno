@@ -3,6 +3,25 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Carga simple y sin dependencias de variables de entorno desde .env si existe
+const envPath = path.join(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const idx = trimmed.indexOf('=');
+      if (idx !== -1) {
+        const key = trimmed.substring(0, idx).trim();
+        const val = trimmed.substring(idx + 1).trim();
+        if (!process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  });
+}
+
 const PORT = process.env.PORT || 3000;
 const WEB_DIR = path.join(process.cwd(), 'src/web');
 
@@ -20,6 +39,58 @@ const server = http.createServer((req, res) => {
   if (req.url === '/api/v1/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'HEALTHY', institucion: 'GAMEA', version: '1.0.0' }));
+    return;
+  }
+
+  // Endpoint para obtener configuración institucional del agente (.env)
+  if (req.url === '/api/v1/config/agent' && req.method === 'GET') {
+    const hasKey = !!process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.length > 5;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      hasServerApiKey: hasKey,
+      defaultModel: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+      keyPreview: hasKey ? `${process.env.OPENROUTER_API_KEY!.substring(0, 10)}...` : ''
+    }));
+    return;
+  }
+
+  // Proxy seguro opcional para llamadas a OpenRouter usando la clave del .env si no se provee en cliente
+  if (req.url === '/api/v1/agent/chat' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const apiKey = payload.apiKey || process.env.OPENROUTER_API_KEY;
+        if (!apiKey) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: { message: 'No se configuró clave OPENROUTER_API_KEY en .env ni en el panel.' } }));
+          return;
+        }
+
+        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://soporte.elalto.gob.bo',
+            'X-Title': 'GAMEA Soporte Interno'
+          },
+          body: JSON.stringify({
+            model: payload.model || process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+            temperature: payload.temperature ?? 0.3,
+            messages: payload.messages || []
+          })
+        });
+
+        const data = await openRouterRes.text();
+        res.writeHead(openRouterRes.status, { 'Content-Type': 'application/json' });
+        res.end(data);
+      } catch (err: any) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: { message: err?.message || 'Error al conectar con OpenRouter' } }));
+      }
+    });
     return;
   }
 
