@@ -801,6 +801,7 @@ window.ejecutarAnalisisIA = function() {
   }, 400);
 };
 
+function setupActionButtons() {
   // Configuración de listeners globales
   document.getElementById('btn-config-agente')?.addEventListener('click', () => {
     cargarParametrosEntrenamiento();

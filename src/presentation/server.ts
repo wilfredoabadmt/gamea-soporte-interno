@@ -31,10 +31,18 @@ const MIME_TYPES: Record<string, string> = {
   '.js': 'application/javascript',
   '.json': 'application/json',
   '.png': 'image/png',
-  '.svg': 'image/svg+xml'
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
 };
 
 const server = http.createServer((req, res) => {
+  // Manejo de favicon para evitar 404 en navegadores
+  if (req.url === '/favicon.ico') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   // Manejo de endpoints API básicos
   if (req.url === '/api/v1/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
