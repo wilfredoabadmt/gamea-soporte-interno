@@ -852,7 +852,7 @@ const DEFAULT_ACTIONS_PROTOCOL = `[PAUTAS DE ATENCIÓN Y PROTOCOLOS DE ACCIÓN]:
 
 let serverEnvConfig = {
   hasServerApiKey: false,
-  defaultModel: 'anthropic/claude-3.5-sonnet',
+  defaultModel: 'google/gemini-2.0-flash-exp:free',
   keyPreview: ''
 };
 
@@ -888,7 +888,7 @@ function actualizarBannerEnv() {
 
 function cargarParametrosEntrenamiento() {
   const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'anthropic/claude-3.5-sonnet';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'google/gemini-2.0-flash-exp:free';
   const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
   const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;
@@ -963,7 +963,7 @@ window.enviarMensajeChat = async function() {
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
   const localApiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'anthropic/claude-3.5-sonnet';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'google/gemini-2.0-flash-exp:free';
   const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
   const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;

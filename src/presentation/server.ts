@@ -48,7 +48,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       hasServerApiKey: hasKey,
-      defaultModel: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+      defaultModel: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-exp:free',
       keyPreview: hasKey ? `${process.env.OPENROUTER_API_KEY!.substring(0, 10)}...` : ''
     }));
     return;
@@ -77,7 +77,7 @@ const server = http.createServer((req, res) => {
             'X-Title': 'GAMEA Soporte Interno'
           },
           body: JSON.stringify({
-            model: payload.model || process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+            model: payload.model || process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-exp:free',
             temperature: payload.temperature ?? 0.3,
             messages: payload.messages || []
           })
