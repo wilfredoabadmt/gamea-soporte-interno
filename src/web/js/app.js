@@ -595,7 +595,7 @@ function renderVistaControlAgente() {
   const greeting = localStorage.getItem('gamea_agent_greeting') || '¡Hola! Le damos la bienvenida al soporte institucional del GAMEA. Soy su asistente virtual interno, ¿en qué requerimiento técnico o normativo puedo orientarle hoy?';
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
   const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'google/gemini-2.0-flash-exp:free';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'nvidia/nemotron-3-super-120b-a12b:free';
   const temp = localStorage.getItem('gamea_agent_temperature') || '0.3';
   const agentEnabled = localStorage.getItem('gamea_agent_enabled') !== 'false';
 
@@ -1097,7 +1097,7 @@ const DEFAULT_ACTIONS_PROTOCOL = `[PAUTAS DE ATENCIÓN Y PROTOCOLOS DE ACCIÓN]:
 
 let serverEnvConfig = {
   hasServerApiKey: false,
-  defaultModel: 'google/gemini-2.0-flash-exp:free',
+  defaultModel: 'nvidia/nemotron-3-super-120b-a12b:free',
   keyPreview: ''
 };
 
@@ -1133,7 +1133,7 @@ function actualizarBannerEnv() {
 
 function cargarParametrosEntrenamiento() {
   const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'google/gemini-2.0-flash-exp:free';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'nvidia/nemotron-3-super-120b-a12b:free';
   const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
   const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;
@@ -1208,7 +1208,7 @@ window.enviarMensajeChat = async function() {
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
   const localApiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
-  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'google/gemini-2.0-flash-exp:free';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'nvidia/nemotron-3-super-120b-a12b:free';
   const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
   const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
   const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;

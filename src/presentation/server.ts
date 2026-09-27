@@ -56,7 +56,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       hasServerApiKey: hasKey,
-      defaultModel: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-exp:free',
+      defaultModel: process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free',
       keyPreview: hasKey ? `${process.env.OPENROUTER_API_KEY!.substring(0, 10)}...` : ''
     }));
     return;
@@ -85,7 +85,7 @@ const server = http.createServer((req, res) => {
             'X-Title': 'GAMEA Soporte Interno'
           },
           body: JSON.stringify({
-            model: payload.model || process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-exp:free',
+            model: payload.model || process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free',
             temperature: payload.temperature ?? 0.3,
             messages: payload.messages || []
           })
