@@ -1226,7 +1226,7 @@ window.enviarMensajeChat = async function() {
       } else if (t.includes('red') || t.includes('fibra') || t.includes('internet')) {
         respuestaSimulada = 'Los reportes de conectividad y enlaces de fibra óptica son clasificados con prioridad ALTA en la Dirección de Tecnologías e Información, con un SLA de respuesta máxima de 4 horas.';
       } else {
-        respuestaSimulada = `He recibido su consulta: "<em>${escapeHTML(texto)}</em>". Para activar respuestas en tiempo real con modelos como Claude 3.5 Sonnet, GPT-4o o Gemini 2.0 Flash, configure su clave en el archivo <code>.env</code> o en el botón ⚙ del chat.`;
+        respuestaSimulada = `He recibido su consulta: "<em>${escapeHTML(texto)}</em>". Para activar respuestas en tiempo real con modelos 100% gratuitos como Gemini 2.0 Flash o Llama 3.3 70B de OpenRouter, configure su clave en el archivo <code>.env</code> o en el panel de administración.`;
       }
 
       botBubble.innerHTML = `${respuestaSimulada}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
