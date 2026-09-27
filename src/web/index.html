@@ -37,6 +37,12 @@
           <span class="nav-badge" id="count-supervision">2</span>
         </div>
 
+        <div class="nav-section-title" style="margin-top: 1rem;">Administración y Usuarios</div>
+        <div class="nav-item" id="btn-usuarios-oficinas">
+          <span>Gestión de Usuarios</span>
+          <span class="nav-badge" style="color: var(--color-status-resuelto);" id="count-usuarios">5</span>
+        </div>
+
         <div class="nav-section-title" style="margin-top: 1rem;">Herramientas Internas</div>
         <div class="nav-item" id="btn-nuevo-caso">
           <span>+ Nuevo Requerimiento</span>
@@ -52,97 +58,236 @@
       <header class="top-bar">
         <div>
           <h2 style="font-size: 1.1rem; font-weight: 600;" id="inbox-title">Mi Bandeja Personal</h2>
-          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Servidor Público Autenticado: Lic. Marco Antonio Quispe</span>
+          <span style="font-size: 0.8rem; color: var(--color-text-muted);" id="user-display-label">Servidor Público Autenticado: Lic. Marco Antonio Quispe</span>
         </div>
         <div class="user-profile-badge">
-          <span style="font-size: 0.85rem; font-weight: 500;">DIR. TECNOLOGÍAS E INFORMACIÓN</span>
-          <div class="user-avatar">MQ</div>
+          <span style="font-size: 0.85rem; font-weight: 500;" id="user-dep-badge">DIR. TECNOLOGÍAS E INFORMACIÓN</span>
+          <div class="user-avatar" id="user-avatar-initials">MQ</div>
         </div>
       </header>
 
-      <section class="workspace-grid">
+      <!-- Panel de Vistas Dinámicas -->
+      <section class="workspace-grid" id="main-workspace-grid">
         <!-- Lista de Casos Internos -->
         <div class="cases-inbox-panel">
           <div class="inbox-header">
-            <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted);">CASOS EN ATENCIÓN</span>
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted);" id="cases-panel-heading">CASOS EN ATENCIÓN</span>
             <button class="btn-primary" style="font-size: 0.75rem;" id="btn-filtrar-subalcaldia">Filtrar por Distrito</button>
           </div>
           <div class="cases-scroll-list" id="cases-list-container">
             <!-- Casos renderizados dinámicamente -->
-            <div class="case-card selected">
-              <div class="case-card-header">
-                <span class="case-code">CAS-2026-0084</span>
-                <span class="status-tag" style="background-color: var(--color-status-proceso); color: #000;">EN_PROCESO</span>
-              </div>
-              <div class="case-title">Falla de enlace de fibra óptica y red interna en piso 3</div>
-              <div class="case-meta">
-                <span>Origen: Dir. Asesoría Jurídica</span>
-                <span style="color: var(--color-accent);">SLA: 2h restantes</span>
-              </div>
-            </div>
-
-            <div class="case-card">
-              <div class="case-card-header">
-                <span class="case-code">CAS-2026-0089</span>
-                <span class="status-tag" style="background-color: var(--color-status-derivacion); color: #fff;">EN_DERIVACION</span>
-              </div>
-              <div class="case-title">Mantenimiento de computadoras y catastro distrital</div>
-              <div class="case-meta">
-                <span>Destino: Subalcaldía Distrito 3</span>
-                <span>Prioridad: ALTA</span>
-              </div>
-            </div>
           </div>
         </div>
 
         <!-- Expediente del Caso y Línea de Tiempo de Novedades -->
         <div class="case-detail-panel" id="case-detail-container">
-          <div class="detail-header">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-              <div>
-                <span class="case-code" style="font-size: 0.95rem;">EXPEDIENTE CAS-2026-0084</span>
-                <h1 style="font-size: 1.35rem; font-weight: 700; margin-top: 0.25rem;">Falla de enlace de fibra óptica y red interna en piso 3</h1>
-              </div>
-              <div style="display: flex; gap: 0.5rem;">
-                <button class="btn-accent" id="btn-derivar-modal">Derivar a Subalcaldía</button>
-                <button class="btn-primary" id="btn-registrar-novedad">Registrar Novedad</button>
-              </div>
-            </div>
-            <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.4;">
-              El personal técnico de la Dirección Jurídica reporta cortes intermitentes en la base de datos central. Se requiere verificación in situ del rack de comunicaciones y empalmes.
-            </p>
-          </div>
-
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">Cronología de Novedades Institucionales (Inmutable)</h3>
-          
-          <div class="timeline-novedades">
-            <div class="timeline-item">
-              <div class="timeline-dot"></div>
-              <div class="timeline-content">
-                <div class="timeline-header">
-                  <span style="font-weight: 600; color: var(--color-accent);">Novedad: Inicio de Atención Técnica</span>
-                  <span>Hoy, 09:15 AM</span>
-                </div>
-                <p style="font-size: 0.88rem;">Técnico Marco Antonio Quispe ha iniciado pruebas de reflectometría en el switch principal.</p>
-                <span style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.5rem; display: block;">Autor: Marco Antonio Quispe (Técnico de Redes)</span>
-              </div>
-            </div>
-
-            <div class="timeline-item">
-              <div class="timeline-dot" style="background-color: var(--color-status-asignado);"></div>
-              <div class="timeline-content">
-                <div class="timeline-header">
-                  <span style="font-weight: 600; color: var(--color-status-asignado);">Novedad: Asignación Operativa</span>
-                  <span>Hoy, 08:30 AM</span>
-                </div>
-                <p style="font-size: 0.88rem;">Supervisor asignó el caso formalmente a la unidad de Redes y Telecomunicaciones.</p>
-              </div>
-            </div>
-          </div>
+          <!-- Detalle de caso o vista especial renderizada dinámicamente -->
         </div>
       </section>
     </main>
   </div>
+
+  <!-- Modal: Crear Nuevo Requerimiento -->
+  <div class="modal-overlay" id="modal-nuevo-requerimiento">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>+ Registrar Nuevo Requerimiento Interno</h3>
+        <button class="modal-close-btn" onclick="window.cerrarModales()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Funcionario Solicitante</label>
+          <select class="form-select" id="req-solicitante-select">
+            <!-- Cargado dinámicamente -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Dependencia Destino</label>
+          <select class="form-select" id="req-destino-select">
+            <option value="DIR-TECNOLOGIAS-INF">Dirección de Tecnologías e Información</option>
+            <option value="DIR-INFRAESTRUCTURA">Dirección de Infraestructura Pública</option>
+            <option value="DIR-JURIDICA">Dirección General de Asesoría Jurídica</option>
+            <option value="SEC-ADMIN-FINANZAS">Secretaría Municipal de Administración y Finanzas</option>
+            <option value="SUBALCALDIA-D1">Subalcaldía Distrito 1</option>
+            <option value="SUBALCALDIA-D3">Subalcaldía Distrito 3</option>
+            <option value="SUBALCALDIA-D8">Subalcaldía Distrito 8</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Prioridad Institucional</label>
+          <select class="form-select" id="req-prioridad-select">
+            <option value="BAJA">Baja</option>
+            <option value="MEDIA" selected>Media</option>
+            <option value="ALTA">Alta</option>
+            <option value="URGENTE">Urgente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Asunto del Requerimiento</label>
+          <input type="text" class="form-input" id="req-asunto-input" placeholder="Ej. Solicitud de asistencia técnica o provisión de materiales">
+        </div>
+        <div class="form-group">
+          <label>Descripción Justificada</label>
+          <textarea class="form-textarea" id="req-descripcion-input" placeholder="Detalle los antecedentes técnicos y requerimientos específicos..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.cerrarModales()">Cancelar</button>
+        <button class="btn-accent" onclick="window.guardarNuevoRequerimiento()">Crear Requerimiento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nuevo Funcionario / Usuario de Oficina -->
+  <div class="modal-overlay" id="modal-nuevo-usuario">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>+ Crear Usuario / Servidor Público de Oficina</h3>
+        <button class="modal-close-btn" onclick="window.cerrarModales()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Carnet de Identidad (C.I.)</label>
+          <input type="text" class="form-input" id="usr-ci-input" placeholder="Ej. 6894512 LP">
+        </div>
+        <div class="form-group">
+          <label>Nombres y Apellidos</label>
+          <input type="text" class="form-input" id="usr-nombre-input" placeholder="Ej. Patricia Andrea Vargas Ramos">
+        </div>
+        <div class="form-group">
+          <label>Oficina / Dependencia Asignada</label>
+          <select class="form-select" id="usr-dependencia-select">
+            <option value="DIR-JURIDICA">Dirección General de Asesoría Jurídica</option>
+            <option value="DIR-TECNOLOGIAS-INF">Dirección de Tecnologías e Información</option>
+            <option value="DIR-INFRAESTRUCTURA">Dirección de Infraestructura Pública</option>
+            <option value="DIR-CATASTRO">Dirección de Catastro y Administración Territorial</option>
+            <option value="SEC-ADMIN-FINANZAS">Secretaría de Administración y Finanzas</option>
+            <option value="SUBALCALDIA-D1">Subalcaldía Distrito Municipal 1</option>
+            <option value="SUBALCALDIA-D2">Subalcaldía Distrito Municipal 2</option>
+            <option value="SUBALCALDIA-D3">Subalcaldía Distrito Municipal 3</option>
+            <option value="SUBALCALDIA-D4">Subalcaldía Distrito Municipal 4</option>
+            <option value="SUBALCALDIA-D8">Subalcaldía Distrito Municipal 8</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cargo Funcional</label>
+          <input type="text" class="form-input" id="usr-cargo-input" placeholder="Ej. Encargado de Activos / Asesor Legal">
+        </div>
+        <div class="form-group">
+          <label>Rol Institucional</label>
+          <select class="form-select" id="usr-rol-select">
+            <option value="SOLICITANTE">Funcionario Solicitante (Cliente Interno de Oficina)</option>
+            <option value="FUNCIONARIO_TECNICO">Técnico Operativo de Soporte</option>
+            <option value="SUPERVISOR_UNIDAD">Supervisor de Unidad</option>
+            <option value="DIRECTOR">Director / Jefe de Área</option>
+            <option value="SUBALCALDE">Subalcalde Distrital</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.cerrarModales()">Cancelar</button>
+        <button class="btn-accent" onclick="window.guardarNuevoUsuario()">Registrar Funcionario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Copiloto Asistente IA -->
+  <div class="modal-overlay" id="modal-asistente-ia">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: var(--color-accent); font-weight: 800; font-size: 1.2rem;">✦</span>
+          <h3>Copiloto IA Institucional (GAMEA)</h3>
+        </div>
+        <button class="modal-close-btn" onclick="window.cerrarModales()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--color-text-muted);">
+          Asistente normativo basado en RAG y clasificador de requerimientos. (Threshold institucional = 0.60).
+        </p>
+        <div class="form-group">
+          <label>Escriba su consulta de procedimiento o describa un caso</label>
+          <textarea class="form-textarea" id="ia-prompt-input" placeholder="Ej. ¿Cuál es el procedimiento para solicitar mantenimiento de maquinaria pesada en una Subalcaldía?"></textarea>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-accent" onclick="window.ejecutarAnalisisIA()">Analizar con IA / RAG</button>
+        </div>
+        <div id="ia-resultado-box" style="display: none; background-color: var(--color-bg-base); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
+          <!-- Resultado renderizado -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.cerrarModales()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Derivación Inter-Oficinas -->
+  <div class="modal-overlay" id="modal-derivar-caso">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Derivación Inter-Oficinas y Subalcaldías</h3>
+        <button class="modal-close-btn" onclick="window.cerrarModales()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Dependencia / Subalcaldía de Destino</label>
+          <select class="form-select" id="deriv-destino-select">
+            <option value="Subalcaldía Distrito 1 (Villa Dolores)">Subalcaldía Distrito 1 (Villa Dolores)</option>
+            <option value="Subalcaldía Distrito 3 (Pacajes / Villa Adela)">Subalcaldía Distrito 3 (Pacajes / Villa Adela)</option>
+            <option value="Subalcaldía Distrito 4 (Río Seco)">Subalcaldía Distrito 4 (Río Seco)</option>
+            <option value="Subalcaldía Distrito 8 (Senkata)">Subalcaldía Distrito 8 (Senkata)</option>
+            <option value="Dirección General de Asesoría Jurídica">Dirección General de Asesoría Jurídica</option>
+            <option value="Dirección de Infraestructura Pública">Dirección de Infraestructura Pública</option>
+            <option value="Dirección de Tecnologías e Información">Dirección de Tecnologías e Información</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Motivo Formal de Derivación (Inmutable en Expediente)</label>
+          <textarea class="form-textarea" id="deriv-motivo-input" placeholder="Justifique detalladamente el motivo de derivación por competencia institucional..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.cerrarModales()">Cancelar</button>
+        <button class="btn-accent" onclick="window.confirmarDerivacion()">Ejecutar Derivación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar Novedad Institucional -->
+  <div class="modal-overlay" id="modal-nueva-novedad">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Registrar Novedad Institucional</h3>
+        <button class="modal-close-btn" onclick="window.cerrarModales()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Tipo de Novedad</label>
+          <select class="form-select" id="nov-tipo-select">
+            <option value="AVANCE">Avance Operativo</option>
+            <option value="OBSERVACION">Observación Técnica</option>
+            <option value="INCIDENCIA">Incidencia o Bloqueo</option>
+            <option value="COMPROMISO">Compromiso Administrativo</option>
+            <option value="INSTRUCCION">Instrucción Superior</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Título de la Novedad</label>
+          <input type="text" class="form-input" id="nov-titulo-input" placeholder="Ej. Realizadas pruebas de empalme en rack central">
+        </div>
+        <div class="form-group">
+          <label>Descripción del Hecho</label>
+          <textarea class="form-textarea" id="nov-descripcion-input" placeholder="Detalle los avances o hechos ocurridos..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.cerrarModales()">Cancelar</button>
+        <button class="btn-primary" onclick="window.confirmarNovedad()">Guardar Novedad</button>
+      </div>
+    </div>
+  </div>
+
   <script src="./js/app.js"></script>
 </body>
 </html>
