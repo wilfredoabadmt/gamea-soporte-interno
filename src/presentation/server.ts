@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { FileCasoRepository, CasoRecord } from '../infrastructure/persistence/FileCasoRepository.js';
+import { PostgresCasoRepository } from '../infrastructure/persistence/PostgresCasoRepository.js';
 
 // Carga simple y sin dependencias de variables de entorno desde .env si existe
 const envPath = path.join(process.cwd(), '.env');
@@ -24,7 +25,43 @@ if (fs.existsSync(envPath)) {
 
 const PORT = process.env.PORT || 3000;
 const WEB_DIR = path.join(process.cwd(), 'src/web');
-const casoRepo = new FileCasoRepository();
+
+// Gestor de persistencia híbrido: PostgreSQL prioritario con fallback a archivo atómico
+const fileRepo = new FileCasoRepository();
+let pgRepo: PostgresCasoRepository | null = null;
+if (process.env.DATABASE_URL) {
+  try {
+    pgRepo = new PostgresCasoRepository();
+    pgRepo.init().catch(err => {
+      console.warn('[GAMEA Server] No se pudo inicializar PostgreSQL de inmediato, usando FileRepo fallback:', err.message);
+    });
+  } catch (err) {
+    console.warn('[GAMEA Server] Falló creación de PostgresCasoRepository, usando FileRepo:', err);
+  }
+}
+
+async function getCasoRepository() {
+  if (pgRepo && process.env.DATABASE_URL) {
+    return {
+      type: 'PostgreSQL 16 (GAMEA Cloud Database)',
+      getAll: () => pgRepo!.getAll(),
+      getById: (id: string) => pgRepo!.getById(id),
+      create: (caso: CasoRecord) => pgRepo!.create(caso),
+      addNovedad: (id: string, n: any) => pgRepo!.addNovedad(id, n),
+      derivar: (id: string, dest: string, mot: string, aut: string) => pgRepo!.derivar(id, dest, mot, aut),
+      resolver: (id: string, sol: string, aut: string) => pgRepo!.resolver(id, sol, aut)
+    };
+  }
+  return {
+    type: 'FileCasoRepository (Atómico en Disco)',
+    getAll: async () => fileRepo.getAll(),
+    getById: async (id: string) => fileRepo.getById(id) || null,
+    create: async (caso: CasoRecord) => fileRepo.create(caso),
+    addNovedad: async (id: string, n: any) => fileRepo.addNovedad(id, n),
+    derivar: async (id: string, dest: string, mot: string, aut: string) => fileRepo.derivar(id, dest, mot, aut),
+    resolver: async (id: string, sol: string, aut: string) => fileRepo.resolver(id, sol, aut)
+  };
+}
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -86,11 +123,13 @@ const server = http.createServer(async (req, res) => {
 
   // Endpoint de Salud
   if (pathname === '/api/v1/health') {
+    const repo = await getCasoRepository();
     sendJson(res, 200, {
       status: 'HEALTHY',
       institucion: 'Gobierno Autónomo Municipal de El Alto — GAMEA',
       version: '1.0.0',
-      storage: 'PERSISTENT_FILE_CASES'
+      database: repo.type,
+      hasPostgresConfigured: !!process.env.DATABASE_URL
     });
     return;
   }
@@ -141,13 +180,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ==========================================================================
-  // API REST: CRUD DE CASOS EN ATENCIÓN (Persistencia en Base de Datos/Disco)
+  // API REST: CRUD DE CASOS EN ATENCIÓN (PostgreSQL / Persistencia)
   // ==========================================================================
+  const casoRepo = await getCasoRepository();
 
   // 1. GET /api/v1/cases - Obtener todos los casos persistidos
   if (pathname === '/api/v1/cases' && method === 'GET') {
-    const cases = casoRepo.getAll();
-    sendJson(res, 200, cases);
+    try {
+      const cases = await casoRepo.getAll();
+      sendJson(res, 200, cases);
+    } catch (err: any) {
+      sendJson(res, 500, { error: err?.message || 'Error al obtener los casos' });
+    }
     return;
   }
 
@@ -160,7 +204,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const existingCases = casoRepo.getAll();
+      const existingCases = await casoRepo.getAll();
       const nextNum = 100 + existingCases.length;
       const nuevoId = body.id || body.codigo || `CAS-2026-0${nextNum}`;
 
@@ -190,7 +234,7 @@ const server = http.createServer(async (req, res) => {
         ]
       };
 
-      const creado = casoRepo.create(nuevoCaso);
+      const creado = await casoRepo.create(nuevoCaso);
       sendJson(res, 201, creado);
     } catch (err: any) {
       sendJson(res, 500, { error: err?.message || 'Error al persistir el nuevo caso' });
@@ -215,7 +259,7 @@ const server = http.createServer(async (req, res) => {
         descripcion: body.descripcion,
         color: body.color || 'var(--color-accent)'
       };
-      const actualizado = casoRepo.addNovedad(casoId, novedad);
+      const actualizado = await casoRepo.addNovedad(casoId, novedad);
       if (!actualizado) {
         sendJson(res, 404, { error: `Caso ${casoId} no encontrado` });
         return;
@@ -237,7 +281,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'Campos requeridos: destino y motivo' });
         return;
       }
-      const actualizado = casoRepo.derivar(
+      const actualizado = await casoRepo.derivar(
         casoId,
         body.destino,
         body.motivo,
@@ -264,7 +308,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'Campo requerido: solucion' });
         return;
       }
-      const actualizado = casoRepo.resolver(
+      const actualizado = await casoRepo.resolver(
         casoId,
         body.solucion,
         body.autor || 'Lic. Marco Antonio Quispe'
@@ -283,13 +327,17 @@ const server = http.createServer(async (req, res) => {
   // 6. GET /api/v1/cases/:id - Obtener detalle de un caso específico
   const matchCasoSingle = pathname.match(/^\/api\/v1\/cases\/([^/]+)$/);
   if (matchCasoSingle && method === 'GET') {
-    const casoId = decodeURIComponent(matchCasoSingle[1]);
-    const caso = casoRepo.getById(casoId);
-    if (!caso) {
-      sendJson(res, 404, { error: `Caso ${casoId} no encontrado` });
-      return;
+    try {
+      const casoId = decodeURIComponent(matchCasoSingle[1]);
+      const caso = await casoRepo.getById(casoId);
+      if (!caso) {
+        sendJson(res, 404, { error: `Caso ${casoId} no encontrado` });
+        return;
+      }
+      sendJson(res, 200, caso);
+    } catch (err: any) {
+      sendJson(res, 500, { error: err?.message || 'Error al obtener caso' });
     }
-    sendJson(res, 200, caso);
     return;
   }
 
