@@ -291,7 +291,8 @@ function setupNavigation() {
     { id: 'btn-inbox-unidad', tab: 'unidad', title: 'Bandeja de Unidad — Casos Consolidados' },
     { id: 'btn-inbox-subalcaldia', tab: 'subalcaldia', title: 'Subalcaldías de El Alto (14 Distritos)' },
     { id: 'btn-inbox-supervision', tab: 'supervision', title: 'Consola de Supervisión y Monitoreo SLA' },
-    { id: 'btn-usuarios-oficinas', tab: 'usuarios', title: 'Gestión de Funcionarios y Usuarios de Oficina' }
+    { id: 'btn-usuarios-oficinas', tab: 'usuarios', title: 'Gestión de Funcionarios y Usuarios de Oficina' },
+    { id: 'btn-agente-control-panel', tab: 'agente-control', title: 'Centro de Instrucciones y Conocimiento del Agente IA' }
   ];
 
   navItems.forEach(item => {
@@ -307,6 +308,8 @@ function setupNavigation() {
         renderVistaUsuarios();
       } else if (item.tab === 'supervision') {
         renderVistaSupervision();
+      } else if (item.tab === 'agente-control') {
+        renderVistaControlAgente();
       } else {
         restaurarWorkspaceGrid();
         renderCasesList();
@@ -577,6 +580,217 @@ function renderVistaUsuarios() {
     </div>
   `;
 }
+
+// ============================================================================
+// VISTA EXCLUSIVA SUPERADMIN: CENTRO DE INSTRUCCIONES Y CONOCIMIENTO DEL AGENTE IA
+// ============================================================================
+function renderVistaControlAgente() {
+  const container = document.getElementById('case-detail-container');
+  if (!container) return;
+
+  const agentName = localStorage.getItem('gamea_agent_name') || 'Asistente Institucional GAMEA';
+  const tone = localStorage.getItem('gamea_agent_tone') || 'Comunícate siempre con un tono formal, amable, claro, respetuoso y estrictamente institucional con los servidores públicos.';
+  const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
+  const actions = localStorage.getItem('gamea_agent_actions') || DEFAULT_ACTIONS_PROTOCOL;
+  const greeting = localStorage.getItem('gamea_agent_greeting') || '¡Hola! Le damos la bienvenida al soporte institucional del GAMEA. Soy su asistente virtual interno, ¿en qué requerimiento técnico o normativo puedo orientarle hoy?';
+  const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
+  const model = localStorage.getItem('gamea_agent_model') || serverEnvConfig.defaultModel || 'google/gemini-2.0-flash-exp:free';
+  const temp = localStorage.getItem('gamea_agent_temperature') || '0.3';
+  const agentEnabled = localStorage.getItem('gamea_agent_enabled') !== 'false';
+
+  const totalChars = (sysPrompt + actions + context + greeting).length;
+
+  container.innerHTML = `
+    <div class="detail-header" style="padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <h1 style="font-size: 1.4rem; font-weight: 700; margin: 0;">Centro de Instrucciones y Control del Agente IA</h1>
+            <span class="badge-tag" style="background-color: rgba(244, 162, 97, 0.2); color: var(--color-accent); font-size: 0.75rem;">
+              EXCLUSIVO SUPERADMINISTRADOR
+            </span>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-top: 0.35rem;">
+            Configura el comportamiento, personalidad, reglas de escalado y base de conocimiento que guiarán la atención automatizada a los funcionarios.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; background: var(--color-bg-surface); padding: 0.45rem 0.85rem; border-radius: 8px; border: 1px solid var(--color-border);">
+          <span style="font-size: 0.85rem; font-weight: 600; color: ${agentEnabled ? 'var(--color-status-resuelto)' : '#ef4444'};">
+            ${agentEnabled ? '● Agente Activo' : '○ Agente En Pausa'}
+          </span>
+          <button class="btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;" onclick="window.toggleEstadoAgente()">
+            ${agentEnabled ? 'Desactivar' : 'Activar'}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner Informativo del archivo .env y Modelo -->
+    <div style="background: rgba(27, 77, 126, 0.2); border: 1px solid var(--color-accent); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-size: 0.85rem;">
+        <strong>Conexión OpenRouter:</strong> 
+        <span style="color: var(--color-accent); font-family: monospace;">${model}</span>
+        ${serverEnvConfig.hasServerApiKey ? `<span style="margin-left: 0.75rem; color: var(--color-status-resuelto);">✔ Clave cargada desde archivo .env</span>` : `<span style="margin-left: 0.75rem; color: #ef4444;">Sin clave en .env (usando almacenamiento local o simulación)</span>`}
+      </div>
+      <button class="btn-primary" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;" onclick="window.abrirModal('modal-entrenamiento-agente')">
+        ⚙ Parámetros API y Modelos
+      </button>
+    </div>
+
+    <!-- Panel de Dos Columnas: Comportamiento (Izquierda) vs Knowledge Base (Derecha) -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start;">
+      
+      <!-- COLUMNA 1: Comportamiento e Instrucciones -->
+      <div style="background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Comportamiento</h2>
+          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Cómo se presenta y actúa el agente al responder a los servidores públicos del GAMEA.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-weight: 600; font-size: 0.85rem;">Nombre del Agente</label>
+          <input type="text" class="form-input" id="admin-agent-name" value="${escapeHTML(agentName)}" placeholder="Ej. Asistente Institucional GAMEA">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-weight: 600; font-size: 0.85rem;">Tono de Atención</label>
+          <input type="text" class="form-input" id="admin-agent-tone" value="${escapeHTML(tone)}" placeholder="Comunícate siempre con un tono profesional, institucional, amable y respetuoso...">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-weight: 600; font-size: 0.85rem;">Instrucciones Principales (System Prompt)</label>
+          <textarea class="form-textarea" style="min-height: 140px; font-size: 0.85rem;" id="admin-agent-instructions" placeholder="Define directrices institucionales, trato de 'usted', prohibiciones y alcance...">${escapeHTML(sysPrompt)}</textarea>
+          <span style="font-size: 0.72rem; color: var(--color-text-muted);">💡 El agente adopta este rol de forma mandatoria en cada conversación.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-weight: 600; font-size: 0.85rem;">Reglas de Escalado y Derivación a Técnicos Humanos</label>
+          <textarea class="form-textarea" style="min-height: 120px; font-size: 0.85rem;" id="admin-agent-escalado" placeholder="Criterios para derivar a un técnico de soporte o supervisor institucional...">${escapeHTML(actions)}</textarea>
+          <span style="font-size: 0.72rem; color: var(--color-text-muted);">Define cuándo clasificar como URGENTE y cuándo sugerir transferencia inmediata a DIR-TIC, Infraestructura o Jurídica.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-weight: 600; font-size: 0.85rem;">Mensaje de Saludo Institucional</label>
+          <input type="text" class="form-input" id="admin-agent-greeting" value="${escapeHTML(greeting)}" placeholder="Saludo inicial al abrir el chat...">
+        </div>
+
+        <button class="btn-accent" style="align-self: flex-start; padding: 0.6rem 1.25rem; font-weight: 600;" onclick="window.guardarComportamientoAdmin()">
+          💾 Guardar Comportamiento del Agente
+        </button>
+      </div>
+
+      <!-- COLUMNA 2: Knowledge Base (Base de Conocimiento) -->
+      <div style="background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Base de Conocimiento (Knowledge Base)</h2>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">La única fuente de verdad institucional: lo que no esté respaldado aquí, no lo afirma.</span>
+          </div>
+          <span class="badge-tag" style="background: var(--color-bg-base); font-size: 0.75rem; color: var(--color-text-muted);">
+            ${totalChars.toLocaleString()} caracteres
+          </span>
+        </div>
+
+        <!-- Bloque: Agregar Nueva Pregunta / Respuesta Frecuente -->
+        <div style="background: var(--color-bg-base); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+          <span style="font-weight: 600; font-size: 0.85rem;">Nueva Pregunta / Respuesta Institucional</span>
+          <input type="text" class="form-input" id="kb-pregunta-input" placeholder="Pregunta (p. ej. ¿Cómo solicitar mantenimiento de fibra óptica en Subalcaldía?)">
+          <textarea class="form-textarea" style="min-height: 70px; font-size: 0.85rem;" id="kb-respuesta-input" placeholder="Respuesta oficial con cita de normativa o procedimiento..."></textarea>
+          <button class="btn-primary" style="align-self: flex-start; font-size: 0.75rem; padding: 0.4rem 0.85rem;" onclick="window.agregarFAQKnowledgeBase()">
+            + Agregar Pregunta / Respuesta
+          </button>
+        </div>
+
+        <!-- Bloque: Documentación y Texto Libre -->
+        <div style="background: var(--color-bg-base); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+          <span style="font-weight: 600; font-size: 0.85rem;">Nuevo Bloque de Normativa o Directriz Municipal</span>
+          <textarea class="form-textarea" style="min-height: 80px; font-size: 0.85rem;" id="kb-bloque-input" placeholder="Resoluciones, instructivos de Subalcaldías, reglamentos, horarios de guardia..."></textarea>
+          <button class="btn-secondary" style="align-self: flex-start; font-size: 0.75rem; padding: 0.4rem 0.85rem;" onclick="window.agregarBloqueKnowledgeBase()">
+            + Agregar Bloque de Texto
+          </button>
+        </div>
+
+        <!-- Repositorio Completo de Conocimiento Activo -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label style="font-weight: 600; font-size: 0.85rem;">Corpus de Conocimiento Activo del Agente</label>
+          <textarea class="form-textarea" style="min-height: 220px; font-size: 0.82rem; font-family: monospace; line-height: 1.4;" id="admin-agent-knowledge">${escapeHTML(context)}</textarea>
+        </div>
+
+        <button class="btn-accent" style="align-self: flex-start; padding: 0.6rem 1.25rem; font-weight: 600;" onclick="window.guardarKnowledgeBaseAdmin()">
+          💾 Actualizar Base de Conocimiento
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+window.toggleEstadoAgente = function() {
+  const actual = localStorage.getItem('gamea_agent_enabled') !== 'false';
+  localStorage.setItem('gamea_agent_enabled', (!actual).toString());
+  renderVistaControlAgente();
+  alert(`[GAMEA] Agente IA ${!actual ? 'ACTIVADO' : 'PAUSADO'} exitosamente.`);
+};
+
+window.guardarComportamientoAdmin = function() {
+  const name = document.getElementById('admin-agent-name')?.value.trim() || 'Asistente Institucional GAMEA';
+  const tone = document.getElementById('admin-agent-tone')?.value.trim() || '';
+  const instructions = document.getElementById('admin-agent-instructions')?.value.trim() || DEFAULT_SYSTEM_PROMPT;
+  const escalado = document.getElementById('admin-agent-escalado')?.value.trim() || DEFAULT_ACTIONS_PROTOCOL;
+  const greeting = document.getElementById('admin-agent-greeting')?.value.trim() || '';
+
+  localStorage.setItem('gamea_agent_name', name);
+  localStorage.setItem('gamea_agent_tone', tone);
+  localStorage.setItem('gamea_agent_sys_prompt', `${instructions}\n\n[TONO DE ATENCIÓN]: ${tone}`);
+  localStorage.setItem('gamea_agent_actions', escalado);
+  localStorage.setItem('gamea_agent_greeting', greeting);
+
+  alert('[GAMEA] Parámetros de comportamiento e instrucciones del Agente guardados correctamente.');
+};
+
+window.guardarKnowledgeBaseAdmin = function() {
+  const kb = document.getElementById('admin-agent-knowledge')?.value.trim() || DEFAULT_TRAINING_CONTEXT;
+  localStorage.setItem('gamea_agent_context', kb);
+  alert('[GAMEA] Base de Conocimiento institucional actualizada y lista para RAG.');
+  renderVistaControlAgente();
+};
+
+window.agregarFAQKnowledgeBase = function() {
+  const p = document.getElementById('kb-pregunta-input')?.value.trim();
+  const r = document.getElementById('kb-respuesta-input')?.value.trim();
+  if (!p || !r) {
+    alert('Por favor ingrese la pregunta y la respuesta oficial.');
+    return;
+  }
+
+  const actual = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const nuevoItem = `\n\n[P&R]: ¿${p}?\nR: ${r}`;
+  localStorage.setItem('gamea_agent_context', actual + nuevoItem);
+
+  document.getElementById('kb-pregunta-input').value = '';
+  document.getElementById('kb-respuesta-input').value = '';
+
+  renderVistaControlAgente();
+  alert('[GAMEA] Nueva pregunta/respuesta agregada a la Base de Conocimiento del Agente.');
+};
+
+window.agregarBloqueKnowledgeBase = function() {
+  const bloque = document.getElementById('kb-bloque-input')?.value.trim();
+  if (!bloque) {
+    alert('Por favor ingrese el contenido normativo o directriz.');
+    return;
+  }
+
+  const actual = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const nuevoItem = `\n\n[DIRECTRIZ / NORMATIVA]:\n${bloque}`;
+  localStorage.setItem('gamea_agent_context', actual + nuevoItem);
+
+  document.getElementById('kb-bloque-input').value = '';
+
+  renderVistaControlAgente();
+  alert('[GAMEA] Bloque normativo incorporado a la Base de Conocimiento.');
+};
 
 function poblarSelectsUsuarios() {
   const select = document.getElementById('req-solicitante-select');
