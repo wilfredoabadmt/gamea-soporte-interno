@@ -1296,7 +1296,11 @@ window.enviarMensajeChat = async function() {
       botText = data.choices?.[0]?.message?.content || 'No se obtuvo respuesta del modelo de IA.';
     }
 
-    botBubble.innerHTML = `${escapeHTML(botText).replace(/\n/g, '<br>')}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+    const rawContent = botText;
+    // Filtrar bloques de razonamiento interno <think>...</think>
+    const cleanContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim() || rawContent;
+
+    botBubble.innerHTML = `${escapeHTML(cleanContent).replace(/\n/g, '<br>')}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
   } catch (error) {
     botBubble.innerHTML = `<span style="color: #ef4444;"><strong>Error de Conexión:</strong> ${escapeHTML(error.message)}</span><div class="chat-bubble-time">${ahora}</div>`;
   }
