@@ -22,4 +22,4 @@ COPY src/web ./src/web
 
 EXPOSE 3000
 
-CMD ["node", "dist/presentation/server.js"]
+CMD ["node", "dist/src/presentation/server.js"]
