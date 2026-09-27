@@ -709,6 +709,183 @@ window.ejecutarAnalisisIA = function() {
   }, 400);
 };
 
-function setupActionButtons() {
   // Configuración de listeners globales
+  document.getElementById('btn-config-agente')?.addEventListener('click', () => {
+    cargarParametrosEntrenamiento();
+    abrirModal('modal-entrenamiento-agente');
+  });
+
+  document.getElementById('btn-toggle-whatsapp')?.addEventListener('click', () => {
+    window.toggleWhatsAppChat();
+  });
+
+  document.getElementById('chat-user-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      window.enviarMensajeChat();
+    }
+  });
+
+  cargarParametrosEntrenamiento();
+}
+
+// ============================================================================
+// LÓGICA DE AGENTE INTELIGENTE WHATSAPP & API OPENROUTER
+// ============================================================================
+
+const DEFAULT_SYSTEM_PROMPT = `Eres el Agente Inteligente de Soporte Interno del Gobierno Autónomo Municipal de El Alto (GAMEA).
+Tu función es orientar a los funcionarios municipales en procedimientos administrativos, normativas internas, soporte técnico de sistemas, derivaciones entre unidades y seguimiento de casos.
+Debes responder con tono formal, institucional, claro y respetuoso. Si no tienes certeza de un procedimiento o normativa, debes recomendar la derivación o elevación a revisión humana conforme a la Constitución del GAMEA.`;
+
+const DEFAULT_TRAINING_CONTEXT = `[BASE DE CONOCIMIENTO INSTITUCIONAL GAMEA]
+1. REGLAMENTO DE MAQUINARIA (RES-ADM-GAMEA-045/2025): Toda solicitud distrital de maquinaria pesada debe ser solicitada con al menos 72 horas de anticipación con visto bueno del Subalcalde.
+2. SOPORTE DE REDES Y CONECTIVIDAD: Los cortes de fibra óptica y red troncal en Casa Municipal o Subalcaldías tienen prioridad ALTA con SLA máximo de respuesta de 4 horas.
+3. DERIVACIÓN INTERNA: La derivación traspasa la custodia formal del caso hacia otra oficina o Subalcaldía sin borrar jamás el historial de novedades previas.
+4. LAS 14 SUBALCALDÍAS: El Alto cuenta con 14 Distritos Municipales (D-1 a D-14), con bandejas operativas autónomas pero coordinadas.
+5. PRINCIPIO DE RESPONSABILIDAD: La IA no aprueba gastos ni emite sanciones administrativas; asiste y asesora a los servidores públicos.`;
+
+function cargarParametrosEntrenamiento() {
+  const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
+  const model = localStorage.getItem('gamea_agent_model') || 'anthropic/claude-3.5-sonnet';
+  const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
+  const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const temp = localStorage.getItem('gamea_agent_temperature') || '0.3';
+
+  if (document.getElementById('agent-api-key')) document.getElementById('agent-api-key').value = apiKey;
+  if (document.getElementById('agent-model-select')) document.getElementById('agent-model-select').value = model;
+  if (document.getElementById('agent-system-prompt')) document.getElementById('agent-system-prompt').value = sysPrompt;
+  if (document.getElementById('agent-training-context')) document.getElementById('agent-training-context').value = context;
+  if (document.getElementById('agent-temperature')) document.getElementById('agent-temperature').value = temp;
+
+  if (document.getElementById('chat-model-indicator')) {
+    document.getElementById('chat-model-indicator').textContent = apiKey ? `OpenRouter: ${model.split('/')[1] || model}` : 'Agente GAMEA (Modo Local)';
+  }
+}
+
+window.guardarConfiguracionAgente = function() {
+  const apiKey = document.getElementById('agent-api-key').value.trim();
+  const model = document.getElementById('agent-model-select').value;
+  const sysPrompt = document.getElementById('agent-system-prompt').value.trim();
+  const context = document.getElementById('agent-training-context').value.trim();
+  const temp = document.getElementById('agent-temperature').value;
+
+  localStorage.setItem('gamea_openrouter_api_key', apiKey);
+  localStorage.setItem('gamea_agent_model', model);
+  localStorage.setItem('gamea_agent_sys_prompt', sysPrompt);
+  localStorage.setItem('gamea_agent_context', context);
+  localStorage.setItem('gamea_agent_temperature', temp);
+
+  cargarParametrosEntrenamiento();
+  window.cerrarModales();
+  alert('[GAMEA] Parámetros de entrenamiento y credenciales de OpenRouter guardados correctamente.');
+};
+
+window.toggleWhatsAppChat = function() {
+  const chatWindow = document.getElementById('whatsapp-chat-window');
+  if (!chatWindow) return;
+  chatWindow.classList.toggle('active');
+  if (chatWindow.classList.contains('active')) {
+    document.getElementById('chat-user-input')?.focus();
+  }
+};
+
+window.enviarMensajeChat = async function() {
+  const input = document.getElementById('chat-user-input');
+  const messagesContainer = document.getElementById('chat-messages-container');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  const ahora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Mensaje del usuario
+  const userBubble = document.createElement('div');
+  userBubble.className = 'chat-bubble user';
+  userBubble.innerHTML = `${escapeHTML(texto)}<div class="chat-bubble-time">${ahora}</div>`;
+  messagesContainer.appendChild(userBubble);
+  input.value = '';
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  // Burbuja de respuesta (cargando)
+  const botBubble = document.createElement('div');
+  botBubble.className = 'chat-bubble bot';
+  botBubble.innerHTML = `<em>Escribiendo respuesta institucional...</em><div class="chat-bubble-time">${ahora}</div>`;
+  messagesContainer.appendChild(botBubble);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  const apiKey = localStorage.getItem('gamea_openrouter_api_key') || '';
+  const model = localStorage.getItem('gamea_agent_model') || 'anthropic/claude-3.5-sonnet';
+  const sysPrompt = localStorage.getItem('gamea_agent_sys_prompt') || DEFAULT_SYSTEM_PROMPT;
+  const context = localStorage.getItem('gamea_agent_context') || DEFAULT_TRAINING_CONTEXT;
+  const temp = parseFloat(localStorage.getItem('gamea_agent_temperature') || '0.3');
+
+  if (!apiKey) {
+    // Modo simulación asistida si el usuario aún no configuró su API Key de OpenRouter
+    setTimeout(() => {
+      let respuestaSimulada = '';
+      const t = texto.toLowerCase();
+      if (t.includes('maquinaria') || t.includes('distrito')) {
+        respuestaSimulada = 'Conforme a la <strong>RES-ADM-GAMEA-045/2025</strong>, la solicitud de maquinaria distrital requiere un plazo mínimo de 72 horas de anticipación con aprobación del Subalcalde respectivo.';
+      } else if (t.includes('red') || t.includes('fibra') || t.includes('internet')) {
+        respuestaSimulada = 'Los reportes de conectividad y enlaces de fibra óptica son clasificados con prioridad ALTA en la Dirección de Tecnologías e Información, con un SLA de respuesta máxima de 4 horas.';
+      } else {
+        respuestaSimulada = `He recibido su consulta: "<em>${escapeHTML(texto)}</em>". Para activar respuestas en tiempo real con modelos como Claude 3.5 Sonnet, GPT-4o o Gemini 2.0 Flash, configure su clave en el icono ⚙ del chat.`;
+      }
+
+      botBubble.innerHTML = `${respuestaSimulada}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 600);
+    return;
+  }
+
+  // LLAMADA REAL A LA API DE OPENROUTER
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'GAMEA Soporte Interno'
+      },
+      body: JSON.stringify({
+        model: model,
+        temperature: temp,
+        messages: [
+          {
+            role: 'system',
+            content: `${sysPrompt}\n\n[CONTEXTO DE ENTRENAMIENTO Y DIRECTRICES INSTITUCIONALES]:\n${context}`
+          },
+          {
+            role: 'user',
+            content: texto
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `Error HTTP ${response.status} en OpenRouter`);
+    }
+
+    const data = await response.json();
+    const botText = data.choices?.[0]?.message?.content || 'No se obtuvo respuesta del modelo de IA.';
+
+    botBubble.innerHTML = `${escapeHTML(botText).replace(/\n/g, '<br>')}<div class="chat-bubble-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+  } catch (error) {
+    botBubble.innerHTML = `<span style="color: #ef4444;"><strong>Error OpenRouter:</strong> ${escapeHTML(error.message)}</span><div class="chat-bubble-time">${ahora}</div>`;
+  }
+
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+};
+
+function escapeHTML(str) {
+  return str.replace(/[&<>'"]/g, 
+    tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
 }
