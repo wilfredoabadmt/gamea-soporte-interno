@@ -6,54 +6,62 @@ const { Pool } = pg;
 export class PostgresCasoRepository {
   private pool: pg.Pool;
   private isInitialized = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor(connectionString?: string) {
     this.pool = new Pool({
       connectionString: connectionString || process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+      ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      connectionTimeoutMillis: 5000,
+      query_timeout: 10000
     });
   }
 
   public async init(): Promise<void> {
     if (this.isInitialized) return;
+    if (this.initPromise) return this.initPromise;
 
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS casos_almacenados (
-        id VARCHAR(64) PRIMARY KEY,
-        codigo VARCHAR(64) NOT NULL,
-        titulo VARCHAR(255) NOT NULL,
-        solicitante_id VARCHAR(64),
-        solicitante_nombre VARCHAR(255) NOT NULL,
-        origen VARCHAR(255) NOT NULL,
-        destino VARCHAR(255) NOT NULL,
-        dependencia_actual_id VARCHAR(64) NOT NULL,
-        responsable VARCHAR(255) NOT NULL,
-        prioridad VARCHAR(32) NOT NULL,
-        estado VARCHAR(32) NOT NULL,
-        sla_restante VARCHAR(64) NOT NULL,
-        distrito INTEGER,
-        descripcion TEXT NOT NULL,
-        novedades JSONB NOT NULL DEFAULT '[]'::jsonb,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
+    this.initPromise = (async () => {
+      const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS casos_almacenados (
+          id VARCHAR(64) PRIMARY KEY,
+          codigo VARCHAR(64) NOT NULL,
+          titulo VARCHAR(255) NOT NULL,
+          solicitante_id VARCHAR(64),
+          solicitante_nombre VARCHAR(255) NOT NULL,
+          origen VARCHAR(255) NOT NULL,
+          destino VARCHAR(255) NOT NULL,
+          dependencia_actual_id VARCHAR(64) NOT NULL,
+          responsable VARCHAR(255) NOT NULL,
+          prioridad VARCHAR(32) NOT NULL,
+          estado VARCHAR(32) NOT NULL,
+          sla_restante VARCHAR(64) NOT NULL,
+          distrito INTEGER,
+          descripcion TEXT NOT NULL,
+          novedades JSONB NOT NULL DEFAULT '[]'::jsonb,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `;
 
-    try {
-      await this.pool.query(createTableQuery);
+      try {
+        await this.pool.query(createTableQuery);
 
-      // Verificar si hay casos iniciales, si no, poblar con los iniciales
-      const countRes = await this.pool.query('SELECT COUNT(*) FROM casos_almacenados');
-      if (parseInt(countRes.rows[0].count, 10) === 0) {
-        await this.seedInitialCases();
+        const countRes = await this.pool.query('SELECT COUNT(*) FROM casos_almacenados');
+        if (parseInt(countRes.rows[0].count, 10) === 0) {
+          await this.seedInitialCases();
+        }
+
+        this.isInitialized = true;
+        console.log('[PostgresCasoRepository] Conexión e inicialización en PostgreSQL completadas.');
+      } catch (err: any) {
+        this.initPromise = null;
+        console.error('[PostgresCasoRepository] Error inicializando tabla en PostgreSQL:', err?.message || err);
+        throw err;
       }
+    })();
 
-      this.isInitialized = true;
-      console.log('[PostgresCasoRepository] Conexión y tablas de PostgreSQL verificadas exitosamente.');
-    } catch (err) {
-      console.error('[PostgresCasoRepository] Error inicializando base de datos PostgreSQL:', err);
-      throw err;
-    }
+    return this.initPromise;
   }
 
   private async seedInitialCases(): Promise<void> {
@@ -65,9 +73,9 @@ export class PostgresCasoRepository {
         solicitanteId: 'usr-002',
         solicitanteNombre: 'Dr. Carlos Flores Mendizábal',
         origen: 'Dirección General de Asesoría Jurídica',
-        destino: 'Dirección de Tecnologías e Información',
-        dependenciaActualId: 'DIR-TECNOLOGIAS-INF',
-        responsable: 'Lic. Marco Antonio Quispe',
+        destino: 'JEFATURA-SISTEMAS',
+        dependenciaActualId: 'JEFATURA-SISTEMAS',
+        responsable: 'Lic. Marco Antonio Quispe (Jefe de Sistemas)',
         prioridad: 'ALTA',
         estado: 'EN_PROCESO',
         slaRestante: '2h restantes',
@@ -142,8 +150,33 @@ export class PostgresCasoRepository {
       }
     ];
 
+    const insertQuery = `
+      INSERT INTO casos_almacenados (
+        id, codigo, titulo, solicitante_id, solicitante_nombre, origen, destino,
+        dependencia_actual_id, responsable, prioridad, estado, sla_restante,
+        distrito, descripcion, novedades, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING;
+    `;
+
     for (const c of initialCases) {
-      await this.create(c);
+      await this.pool.query(insertQuery, [
+        c.id,
+        c.codigo,
+        c.titulo,
+        c.solicitanteId,
+        c.solicitanteNombre,
+        c.origen,
+        c.destino,
+        c.dependenciaActualId,
+        c.responsable,
+        c.prioridad,
+        c.estado,
+        c.slaRestante,
+        c.distrito,
+        c.descripcion,
+        JSON.stringify(c.novedades || [])
+      ]);
     }
   }
 
@@ -217,9 +250,9 @@ export class PostgresCasoRepository {
     if (!current) return null;
 
     let distrito = current.distrito;
-    if (destino.includes('SUBALCALDIA')) {
-      const distNum = parseInt(destino.replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(distNum)) distrito = distNum;
+    if (destino.includes('SUBALCALDIA') || destino.toLowerCase().includes('subalcaldia') || destino.toLowerCase().includes('distrito')) {
+      const matchNum = destino.match(/\d+/);
+      if (matchNum) distrito = parseInt(matchNum[0], 10);
     }
 
     const novedad: NovedadRecord = {

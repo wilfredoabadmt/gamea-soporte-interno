@@ -9,8 +9,8 @@ const state = {
   currentUser: {
     id: 'usr-001',
     nombre: 'Lic. Marco Antonio Quispe',
-    dependencia: 'DIR-TECNOLOGIAS-INF',
-    dependenciaNombre: 'Dirección de Tecnologías e Información',
+    dependencia: 'JEFATURA-SISTEMAS',
+    dependenciaNombre: 'Jefatura de Sistemas y Tecnologías (GAMEA)',
     rol: 'SUPERADMIN'
   },
   activeTab: 'personal',
@@ -261,17 +261,17 @@ function aplicarPermisosEspacioTrabajo() {
   const panelHeading = document.getElementById('cases-panel-heading');
 
   if (isSuperadmin) {
-    if (userLabel) userLabel.textContent = 'Servidor Público: Lic. Marco Antonio Quispe (Superadministrador)';
-    if (depBadge) depBadge.textContent = 'DIR. TECNOLOGÍAS E INFORMACIÓN (TI)';
-    if (initials) initials.textContent = 'MQ';
-    if (inboxTitle) inboxTitle.textContent = 'Mi Bandeja Personal (DIR-TIC)';
-    if (panelHeading) panelHeading.textContent = 'CASOS EN ATENCIÓN';
+    if (userLabel) userLabel.textContent = 'Servidor Público: Lic. Marco Antonio Quispe (Jefe de Sistemas - Superadmin)';
+    if (depBadge) depBadge.textContent = 'JEFATURA DE SISTEMAS (SOPORTE)';
+    if (initials) initials.textContent = 'JS';
+    if (inboxTitle) inboxTitle.textContent = 'Mesa de Ayuda de Sistemas — Casos Asignados';
+    if (panelHeading) panelHeading.textContent = 'CASOS EN ATENCIÓN (OFICINAS Y SUBALCALDÍAS)';
   } else {
     if (userLabel) userLabel.textContent = 'Servidor Público: Dr. Carlos Flores Mendizábal (Funcionario Solicitante)';
-    if (depBadge) depBadge.textContent = 'DIR. ASESORÍA JURÍDICA (CLIENTE)';
+    if (depBadge) depBadge.textContent = 'OFICINA / SUBALCALDÍA SOLICITANTE';
     if (initials) initials.textContent = 'CF';
-    if (inboxTitle) inboxTitle.textContent = 'Mis Solicitudes y Requerimientos Emitidos';
-    if (panelHeading) panelHeading.textContent = 'MIS SOLICITUDES';
+    if (inboxTitle) inboxTitle.textContent = 'Mis Solicitudes de Soporte a Sistemas';
+    if (panelHeading) panelHeading.textContent = 'MIS SOLICITUDES DE ASISTENCIA';
   }
 }
 
@@ -293,8 +293,8 @@ function setupNavigation() {
       state.currentUser = {
         id: 'usr-001',
         nombre: 'Lic. Marco Antonio Quispe',
-        dependencia: 'DIR-TECNOLOGIAS-INF',
-        dependenciaNombre: 'Dirección de Tecnologías e Información',
+        dependencia: 'JEFATURA-SISTEMAS',
+        dependenciaNombre: 'Jefatura de Sistemas y Tecnologías (GAMEA)',
         rol: 'SUPERADMIN'
       };
     }
@@ -306,11 +306,11 @@ function setupNavigation() {
     aplicarPermisosEspacioTrabajo();
     renderCasesList();
     renderCaseDetail();
-    alert(`[GAMEA] Espacio de trabajo cambiado a: ${state.currentRole === 'SUPERADMIN' ? '🛡 Superadministrador' : '👤 Usuario / Cliente de Oficina (Solo Lectura y Solicitudes)'}`);
+    alert(`[GAMEA] Espacio de trabajo cambiado a: ${state.currentRole === 'SUPERADMIN' ? '🛡 Superadministrador (Jefatura de Sistemas)' : '👤 Usuario / Solicitante de Oficina'}`);
   });
   const navItems = [
-    { id: 'btn-inbox-personal', tab: 'personal', title: 'Mi Bandeja Personal (DIR-TIC)' },
-    { id: 'btn-inbox-unidad', tab: 'unidad', title: 'Bandeja de Unidad — Casos Consolidados' },
+    { id: 'btn-inbox-personal', tab: 'personal', title: 'Mesa de Ayuda — Jefatura de Sistemas' },
+    { id: 'btn-inbox-unidad', tab: 'unidad', title: 'Bandeja Consolidada de Soporte Institucional' },
     { id: 'btn-inbox-subalcaldia', tab: 'subalcaldia', title: 'Subalcaldías de El Alto (14 Distritos)' },
     { id: 'btn-inbox-supervision', tab: 'supervision', title: 'Consola de Supervisión y Monitoreo SLA' },
     { id: 'btn-usuarios-oficinas', tab: 'usuarios', title: 'Gestión de Funcionarios y Usuarios de Oficina' },
@@ -374,9 +374,14 @@ function renderCasesList() {
     // El usuario común sólo ve los requerimientos donde él es el solicitante o de su oficina
     casosFiltrados = casosFiltrados.filter(c => c.solicitanteId === state.currentUser.id || c.origen === state.currentUser.dependenciaNombre);
   } else {
-    // Vista de superadministrador
+    // Vista de superadministrador (Jefatura de Sistemas)
     if (state.activeTab === 'personal') {
-      casosFiltrados = casosFiltrados.filter(c => c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF');
+      casosFiltrados = casosFiltrados.filter(c => 
+        c.dependenciaActualId === 'JEFATURA-SISTEMAS' || 
+        c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF' ||
+        c.destino.includes('SISTEMAS') ||
+        c.destino.includes('TECNOLOGIAS')
+      );
     } else if (state.activeTab === 'subalcaldia') {
       casosFiltrados = casosFiltrados.filter(c => c.distrito !== null);
     }
@@ -1197,29 +1202,30 @@ function setupActionButtons() {
 // LÓGICA DE AGENTE INTELIGENTE WHATSAPP & API OPENROUTER / .ENV
 // ============================================================================
 
-const DEFAULT_SYSTEM_PROMPT = `Eres el Agente Inteligente de Soporte Interno del Gobierno Autónomo Municipal de El Alto (GAMEA).
-Tu función es orientar a los funcionarios municipales en procedimientos administrativos, normativas internas, soporte técnico de sistemas, derivaciones entre unidades y seguimiento de casos.
-Debes responder con tono formal, institucional, claro, empático y respetuoso. Cumple rigurosamente los protocolos de acción y conocimiento establecidos.`;
+const DEFAULT_SYSTEM_PROMPT = `Eres el Agente Inteligente de la Jefatura de Sistemas y Tecnologías del Gobierno Autónomo Municipal de El Alto (GAMEA).
+Tu función exclusiva es brindar asistencia técnica, soporte de sistemas, conectividad, mesa de ayuda y orientación en derivaciones operativas a todos los funcionarios públicos de las oficinas centrales, secretarías, direcciones y las 14 Subalcaldías de El Alto.
+Debes comunicarte con un tono formal, institucional, claro, empático y respetuoso. Respetas estrictamente la metodología SDD, las normativas internas y nunca tomas decisiones administrativas autónomas.`;
 
-const DEFAULT_TRAINING_CONTEXT = `[BASE DE CONOCIMIENTO INSTITUCIONAL GAMEA]
-1. REGLAMENTO DE MAQUINARIA (RES-ADM-GAMEA-045/2025): Toda solicitud distrital de maquinaria pesada debe ser solicitada con al menos 72 horas de anticipación con visto bueno del Subalcalde.
-2. SOPORTE DE REDES Y CONECTIVIDAD: Los cortes de fibra óptica y red troncal en Casa Municipal o Subalcaldías tienen prioridad ALTA con SLA máximo de respuesta de 4 horas.
-3. DERIVACIÓN INTERNA: La derivación traspasa la custodia formal del caso hacia otra oficina o Subalcaldía sin borrar jamás el historial de novedades previas.
-4. LAS 14 SUBALCALDÍAS: El Alto cuenta con 14 Distritos Municipales (D-1 a D-14), con bandejas operativas autónomas pero coordinadas.
-5. PRINCIPIO DE RESPONSABILIDAD: La IA no aprueba gastos ni emite sanciones administrativas; asiste y asesora a los servidores públicos.`;
+const DEFAULT_TRAINING_CONTEXT = `[BASE DE CONOCIMIENTO INSTITUCIONAL - JEFATURA DE SISTEMAS GAMEA]
+1. ÁMBITO DE ATENCIÓN: Asistencia y soporte técnico exclusivo para todas las oficinas municipales de El Alto y las 14 Subalcaldías (D-1 al D-14).
+2. SISTEMAS Y PLATAFORMAS EN ATENCIÓN: Sistemas de trámite documentario, RUAT tributario, cajas municipales, conectividad LAN/WLAN, enlaces de fibra óptica, correos institucionales y hardware.
+3. PROTOCOLO DE CONECTIVIDAD Y REDES: Caídas de enlace troncal en Casa Municipal o Subalcaldías distritales tienen prioridad ALTA/URGENTE con SLA máximo de 4 horas.
+4. REGLAMENTO DE MAQUINARIA (RES-ADM-GAMEA-045/2025): Toda solicitud de maquinaria pesada debe remitirse con al menos 72h de anticipación y aval del Subalcalde.
+5. DERIVACIÓN INTERNA INSTITUCIONAL: La derivación formal traspasa la custodia operativa del requerimiento a otra dependencia sin borrar antecedentes ni novedades previas.
+6. ALMACENAMIENTO RELACIONAL SEGURO: Todos los casos, novedades, estados y derivaciones se persisten de forma inmediata en la base de datos relacional PostgreSQL 16.`;
 
-const DEFAULT_ACTIONS_PROTOCOL = `[PAUTAS DE ATENCIÓN Y PROTOCOLOS DE ACCIÓN]:
-1. SALUDO INICIAL: Saluda cordialmente mencionando la institución ("Gobierno Autónomo Municipal de El Alto").
-2. IDENTIFICACIÓN DE CASO: Si el funcionario reporta un problema, solicita siempre:
-   - Unidad / Dirección o Subalcaldía de origen.
-   - Cédula de Identidad o código de caso si ya fue registrado.
-   - Breve descripción del incidente o solicitud.
-3. TIPIFICACIÓN DE PRIORIDAD:
-   - PRIORIDAD URGENTE: Si afecta sistemas tributarios (RUAT), caja municipal o corte masivo de enlace.
-   - PRIORIDAD ALTA: Si afecta a directores, secretarios o procesos con plazo fatal legal.
-   - PRIORIDAD MEDIA/BAJA: Consultas de procedimiento, configuración menor o provisión habitual de materiales.
-4. ACCIÓN DE DERIVACIÓN: Cuando la solicitud no corresponda a TI, indica textualmente a qué dependencia debe derivarse formalmente en el sistema (ej. DIR-INFRAESTRUCTURA, DIR-JURIDICA).
-5. ESCALAMIENTO HUMANO OBLIGATORIO: Ante incidentes de seguridad de información o dudas normativas sin respaldo, aconseja de inmediato elevar el requerimiento a supervisión técnica humana.`;
+const DEFAULT_ACTIONS_PROTOCOL = `[PAUTAS DE ATENCIÓN Y PROTOCOLOS DE LA JEFATURA DE SISTEMAS]:
+1. SALUDO INSTITUCIONAL: Saluda en nombre de la "Jefatura de Sistemas - Gobierno Autónomo Municipal de El Alto".
+2. RECOLECCIÓN DE DATOS: Solicita al funcionario requirente:
+   - Oficina, Dirección o Subalcaldía de origen (ej. Subalcaldía D-3, Dir. Jurídica).
+   - Nombre del servidor público y número de C.I.
+   - Detalle del problema técnico o requerimiento informático.
+3. CALIFICACIÓN Y PRIORIZACIÓN:
+   - URGENTE: Si afecta recaudaciones (RUAT, Cajas), caídas masivas de red o servidores centrales.
+   - ALTA: Fallas que paralicen despachos, secretarías o subalcaldías con plazos perentorios.
+   - MEDIA/BAJA: Soporte preventivo, instalación de periféricos, cuentas de usuario o consultas de uso.
+4. ACCIÓN DE DERIVACIÓN: Si el requerimiento es de competencia de otra área (Infraestructura, Catastro, Asesoría Legal), orienta al usuario para derivar formalmente en el sistema.
+5. ESCALAMIENTO HUMANO: Ante incidencias de seguridad informática o requerimientos de compras de equipos, canaliza el caso directamente a la supervisión técnica humana.`;
 
 let serverEnvConfig = {
   hasServerApiKey: false,
