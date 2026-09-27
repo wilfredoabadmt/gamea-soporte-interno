@@ -1,0 +1,28 @@
+{
+  "name": "gamea-soporte-interno",
+  "version": "1.0.0",
+  "description": "Plataforma Interna de Gestión, Soporte, Atención y Seguimiento para Funcionarios del GAMEA",
+  "main": "dist/presentation/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/presentation/server.js",
+    "dev": "ts-node src/presentation/server.ts",
+    "test": "node --test dist/tests/unit/**/*.test.js",
+    "test:ts": "ts-node --test tests/unit/**/*.test.ts"
+  },
+  "keywords": [
+    "gamea",
+    "el-alto",
+    "gestion-interna",
+    "casos",
+    "sdd",
+    "clean-architecture"
+  ],
+  "author": "Gobierno Autónomo Municipal de El Alto",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

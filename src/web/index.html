@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma Interna de Gestión y Soporte — GAMEA</title>
+  <link rel="stylesheet" href="./css/index.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Institucional -->
+    <aside class="sidebar">
+      <div class="institutional-badge">
+        <div class="institutional-logo">G</div>
+        <div class="institutional-title">
+          <h1>GAMEA Soporte</h1>
+          <span>Gestión Interna</span>
+        </div>
+      </div>
+
+      <nav class="inbox-nav">
+        <div class="nav-section-title">Bandejas de Entrada</div>
+        <div class="nav-item active" id="btn-inbox-personal">
+          <span>Mi Bandeja Personal</span>
+          <span class="nav-badge" id="count-personal">3</span>
+        </div>
+        <div class="nav-item" id="btn-inbox-unidad">
+          <span>Bandeja de Unidad</span>
+          <span class="nav-badge" id="count-unidad">12</span>
+        </div>
+        <div class="nav-item" id="btn-inbox-subalcaldia">
+          <span>Subalcaldías (14 D)</span>
+          <span class="nav-badge" id="count-subalcaldia">7</span>
+        </div>
+        <div class="nav-item" id="btn-inbox-supervision">
+          <span>Supervisión y SLA</span>
+          <span class="nav-badge" id="count-supervision">2</span>
+        </div>
+
+        <div class="nav-section-title" style="margin-top: 1rem;">Herramientas Internas</div>
+        <div class="nav-item" id="btn-nuevo-caso">
+          <span>+ Nuevo Requerimiento</span>
+        </div>
+        <div class="nav-item" id="btn-asistente-ia">
+          <span>Copiloto Asistente IA</span>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Área Principal de Trabajo -->
+    <main class="main-content">
+      <header class="top-bar">
+        <div>
+          <h2 style="font-size: 1.1rem; font-weight: 600;" id="inbox-title">Mi Bandeja Personal</h2>
+          <span style="font-size: 0.8rem; color: var(--color-text-muted);">Servidor Público Autenticado: Lic. Marco Antonio Quispe</span>
+        </div>
+        <div class="user-profile-badge">
+          <span style="font-size: 0.85rem; font-weight: 500;">DIR. TECNOLOGÍAS E INFORMACIÓN</span>
+          <div class="user-avatar">MQ</div>
+        </div>
+      </header>
+
+      <section class="workspace-grid">
+        <!-- Lista de Casos Internos -->
+        <div class="cases-inbox-panel">
+          <div class="inbox-header">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted);">CASOS EN ATENCIÓN</span>
+            <button class="btn-primary" style="font-size: 0.75rem;" id="btn-filtrar-subalcaldia">Filtrar por Distrito</button>
+          </div>
+          <div class="cases-scroll-list" id="cases-list-container">
+            <!-- Casos renderizados dinámicamente -->
+            <div class="case-card selected">
+              <div class="case-card-header">
+                <span class="case-code">CAS-2026-0084</span>
+                <span class="status-tag" style="background-color: var(--color-status-proceso); color: #000;">EN_PROCESO</span>
+              </div>
+              <div class="case-title">Falla de enlace de fibra óptica y red interna en piso 3</div>
+              <div class="case-meta">
+                <span>Origen: Dir. Asesoría Jurídica</span>
+                <span style="color: var(--color-accent);">SLA: 2h restantes</span>
+              </div>
+            </div>
+
+            <div class="case-card">
+              <div class="case-card-header">
+                <span class="case-code">CAS-2026-0089</span>
+                <span class="status-tag" style="background-color: var(--color-status-derivacion); color: #fff;">EN_DERIVACION</span>
+              </div>
+              <div class="case-title">Mantenimiento de computadoras y catastro distrital</div>
+              <div class="case-meta">
+                <span>Destino: Subalcaldía Distrito 3</span>
+                <span>Prioridad: ALTA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expediente del Caso y Línea de Tiempo de Novedades -->
+        <div class="case-detail-panel" id="case-detail-container">
+          <div class="detail-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+              <div>
+                <span class="case-code" style="font-size: 0.95rem;">EXPEDIENTE CAS-2026-0084</span>
+                <h1 style="font-size: 1.35rem; font-weight: 700; margin-top: 0.25rem;">Falla de enlace de fibra óptica y red interna en piso 3</h1>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="btn-accent" id="btn-derivar-modal">Derivar a Subalcaldía</button>
+                <button class="btn-primary" id="btn-registrar-novedad">Registrar Novedad</button>
+              </div>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.4;">
+              El personal técnico de la Dirección Jurídica reporta cortes intermitentes en la base de datos central. Se requiere verificación in situ del rack de comunicaciones y empalmes.
+            </p>
+          </div>
+
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">Cronología de Novedades Institucionales (Inmutable)</h3>
+          
+          <div class="timeline-novedades">
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span style="font-weight: 600; color: var(--color-accent);">Novedad: Inicio de Atención Técnica</span>
+                  <span>Hoy, 09:15 AM</span>
+                </div>
+                <p style="font-size: 0.88rem;">Técnico Marco Antonio Quispe ha iniciado pruebas de reflectometría en el switch principal.</p>
+                <span style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.5rem; display: block;">Autor: Marco Antonio Quispe (Técnico de Redes)</span>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <div class="timeline-dot" style="background-color: var(--color-status-asignado);"></div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span style="font-weight: 600; color: var(--color-status-asignado);">Novedad: Asignación Operativa</span>
+                  <span>Hoy, 08:30 AM</span>
+                </div>
+                <p style="font-size: 0.88rem;">Supervisor asignó el caso formalmente a la unidad de Redes y Telecomunicaciones.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="./js/app.js"></script>
+</body>
+</html>
