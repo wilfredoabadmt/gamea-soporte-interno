@@ -171,8 +171,8 @@ const state = {
   ]
 };
 
-// Inicialización de la aplicación
-document.addEventListener('DOMContentLoaded', () => {
+// Inicialización de la aplicación robusta para SPA
+function inicializarApp() {
   setupNavigation();
   actualizarContadores();
   renderCasesList();
@@ -180,7 +180,31 @@ document.addEventListener('DOMContentLoaded', () => {
   setupActionButtons();
   poblarSelectsUsuarios();
   aplicarPermisosEspacioTrabajo();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarApp);
+} else {
+  inicializarApp();
+}
+
+function actualizarContadores() {
+  const cPersonal = document.getElementById('count-personal');
+  const cUnidad = document.getElementById('count-unidad');
+  const cSubalcaldia = document.getElementById('count-subalcaldia');
+  const cSupervision = document.getElementById('count-supervision');
+  const cUsuarios = document.getElementById('count-usuarios');
+
+  const personalCasos = state.cases.filter(c => c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF').length;
+  const subalcaldiaCasos = state.cases.filter(c => c.distrito !== null).length;
+  const urgentes = state.cases.filter(c => c.prioridad === 'URGENTE' || c.prioridad === 'ALTA').length;
+
+  if (cPersonal) cPersonal.textContent = personalCasos;
+  if (cUnidad) cUnidad.textContent = state.cases.length;
+  if (cSubalcaldia) cSubalcaldia.textContent = subalcaldiaCasos;
+  if (cSupervision) cSupervision.textContent = urgentes;
+  if (cUsuarios) cUsuarios.textContent = state.usuarios.length;
+}
 
 function aplicarPermisosEspacioTrabajo() {
   const isSuperadmin = state.currentRole === 'SUPERADMIN';
@@ -208,18 +232,24 @@ function aplicarPermisosEspacioTrabajo() {
   }
 
   // Actualizar etiquetas en la cabecera
+  const userLabel = document.getElementById('user-display-label');
+  const depBadge = document.getElementById('user-dep-badge');
+  const initials = document.getElementById('user-avatar-initials');
+  const inboxTitle = document.getElementById('inbox-title');
+  const panelHeading = document.getElementById('cases-panel-heading');
+
   if (isSuperadmin) {
-    document.getElementById('user-display-label').textContent = 'Servidor Público: Lic. Marco Antonio Quispe (Superadministrador)';
-    document.getElementById('user-dep-badge').textContent = 'DIR. TECNOLOGÍAS E INFORMACIÓN (TI)';
-    document.getElementById('user-avatar-initials').textContent = 'MQ';
-    document.getElementById('inbox-title').textContent = 'Mi Bandeja Personal (DIR-TIC)';
-    document.getElementById('cases-panel-heading').textContent = 'CASOS EN ATENCIÓN';
+    if (userLabel) userLabel.textContent = 'Servidor Público: Lic. Marco Antonio Quispe (Superadministrador)';
+    if (depBadge) depBadge.textContent = 'DIR. TECNOLOGÍAS E INFORMACIÓN (TI)';
+    if (initials) initials.textContent = 'MQ';
+    if (inboxTitle) inboxTitle.textContent = 'Mi Bandeja Personal (DIR-TIC)';
+    if (panelHeading) panelHeading.textContent = 'CASOS EN ATENCIÓN';
   } else {
-    document.getElementById('user-display-label').textContent = 'Servidor Público: Dr. Carlos Flores Mendizábal (Funcionario Solicitante)';
-    document.getElementById('user-dep-badge').textContent = 'DIR. ASESORÍA JURÍDICA (CLIENTE)';
-    document.getElementById('user-avatar-initials').textContent = 'CF';
-    document.getElementById('inbox-title').textContent = 'Mis Solicitudes y Requerimientos Emitidos';
-    document.getElementById('cases-panel-heading').textContent = 'MIS SOLICITUDES';
+    if (userLabel) userLabel.textContent = 'Servidor Público: Dr. Carlos Flores Mendizábal (Funcionario Solicitante)';
+    if (depBadge) depBadge.textContent = 'DIR. ASESORÍA JURÍDICA (CLIENTE)';
+    if (initials) initials.textContent = 'CF';
+    if (inboxTitle) inboxTitle.textContent = 'Mis Solicitudes y Requerimientos Emitidos';
+    if (panelHeading) panelHeading.textContent = 'MIS SOLICITUDES';
   }
 }
 
