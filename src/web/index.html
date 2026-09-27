@@ -37,8 +37,8 @@
           <span class="nav-badge" id="count-supervision">2</span>
         </div>
 
-        <div class="nav-section-title" style="margin-top: 1rem;">Administración y Usuarios</div>
-        <div class="nav-item" id="btn-usuarios-oficinas">
+        <div class="nav-section-title admin-only" style="margin-top: 1rem;">Administración y Usuarios</div>
+        <div class="nav-item admin-only" id="btn-usuarios-oficinas">
           <span>Gestión de Usuarios</span>
           <span class="nav-badge" style="color: var(--color-status-resuelto);" id="count-usuarios">5</span>
         </div>
@@ -50,7 +50,7 @@
         <div class="nav-item" id="btn-asistente-ia">
           <span>Copiloto Asistente IA</span>
         </div>
-        <div class="nav-item" id="btn-config-agente">
+        <div class="nav-item admin-only" id="btn-config-agente">
           <span>⚙ Entrenamiento Agente IA</span>
         </div>
       </nav>
@@ -61,11 +61,20 @@
       <header class="top-bar">
         <div>
           <h2 style="font-size: 1.1rem; font-weight: 600;" id="inbox-title">Mi Bandeja Personal</h2>
-          <span style="font-size: 0.8rem; color: var(--color-text-muted);" id="user-display-label">Servidor Público Autenticado: Lic. Marco Antonio Quispe</span>
+          <span style="font-size: 0.8rem; color: var(--color-text-muted);" id="user-display-label">Servidor Público: Lic. Marco Antonio Quispe</span>
         </div>
-        <div class="user-profile-badge">
-          <span style="font-size: 0.85rem; font-weight: 500;" id="user-dep-badge">DIR. TECNOLOGÍAS E INFORMACIÓN</span>
-          <div class="user-avatar" id="user-avatar-initials">MQ</div>
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; background-color: var(--color-bg-base); padding: 0.35rem 0.75rem; border-radius: 8px; border: 1px solid var(--color-border);">
+            <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 600;">ESPACIO:</span>
+            <select class="form-select" id="switch-role-selector" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; height: auto;">
+              <option value="SUPERADMIN">🛡 Superadministrador (TI / Master)</option>
+              <option value="CLIENTE_USUARIO">👤 Usuario / Cliente de Oficina</option>
+            </select>
+          </div>
+          <div class="user-profile-badge">
+            <span style="font-size: 0.85rem; font-weight: 500;" id="user-dep-badge">DIR. TECNOLOGÍAS E INFORMACIÓN</span>
+            <div class="user-avatar" id="user-avatar-initials">MQ</div>
+          </div>
         </div>
       </header>
 

@@ -5,6 +5,14 @@
 // ============================================================================
 
 const state = {
+  currentRole: 'SUPERADMIN', // 'SUPERADMIN' o 'CLIENTE_USUARIO'
+  currentUser: {
+    id: 'usr-001',
+    nombre: 'Lic. Marco Antonio Quispe',
+    dependencia: 'DIR-TECNOLOGIAS-INF',
+    dependenciaNombre: 'Dirección de Tecnologías e Información',
+    rol: 'SUPERADMIN'
+  },
   activeTab: 'personal',
   selectedCaseId: 'CAS-2026-0084',
   distritoFiltro: null,
@@ -171,17 +179,83 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCaseDetail();
   setupActionButtons();
   poblarSelectsUsuarios();
+  aplicarPermisosEspacioTrabajo();
 });
 
-function actualizarContadores() {
-  document.getElementById('count-personal').textContent = state.cases.filter(c => c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF').length;
-  document.getElementById('count-unidad').textContent = state.cases.length;
-  document.getElementById('count-subalcaldia').textContent = state.cases.filter(c => c.distrito !== null).length;
-  document.getElementById('count-supervision').textContent = state.cases.filter(c => c.prioridad === 'URGENTE' || c.prioridad === 'ALTA').length;
-  document.getElementById('count-usuarios').textContent = state.usuarios.length;
+function aplicarPermisosEspacioTrabajo() {
+  const isSuperadmin = state.currentRole === 'SUPERADMIN';
+
+  // Ocultar o mostrar elementos restringidos al cliente
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isSuperadmin ? '' : 'none';
+  });
+
+  // El cliente de oficina sólo tiene acceso a su bandeja personal de solicitudes
+  const btnUnidad = document.getElementById('btn-inbox-unidad');
+  const btnSubalcaldia = document.getElementById('btn-inbox-subalcaldia');
+  const btnSupervision = document.getElementById('btn-inbox-supervision');
+  if (btnUnidad) btnUnidad.style.display = isSuperadmin ? '' : 'none';
+  if (btnSubalcaldia) btnSubalcaldia.style.display = isSuperadmin ? '' : 'none';
+  if (btnSupervision) btnSupervision.style.display = isSuperadmin ? '' : 'none';
+
+  const btnFiltrarDistrito = document.getElementById('btn-filtrar-subalcaldia');
+  if (btnFiltrarDistrito) btnFiltrarDistrito.style.display = isSuperadmin ? '' : 'none';
+
+  // Ocultar botón de configuración de agente en el chat de WhatsApp si no es superadmin
+  const btnConfigAgenteChat = document.querySelector('button[title="Configurar / Entrenar Agente"]');
+  if (btnConfigAgenteChat) {
+    btnConfigAgenteChat.style.display = isSuperadmin ? '' : 'none';
+  }
+
+  // Actualizar etiquetas en la cabecera
+  if (isSuperadmin) {
+    document.getElementById('user-display-label').textContent = 'Servidor Público: Lic. Marco Antonio Quispe (Superadministrador)';
+    document.getElementById('user-dep-badge').textContent = 'DIR. TECNOLOGÍAS E INFORMACIÓN (TI)';
+    document.getElementById('user-avatar-initials').textContent = 'MQ';
+    document.getElementById('inbox-title').textContent = 'Mi Bandeja Personal (DIR-TIC)';
+    document.getElementById('cases-panel-heading').textContent = 'CASOS EN ATENCIÓN';
+  } else {
+    document.getElementById('user-display-label').textContent = 'Servidor Público: Dr. Carlos Flores Mendizábal (Funcionario Solicitante)';
+    document.getElementById('user-dep-badge').textContent = 'DIR. ASESORÍA JURÍDICA (CLIENTE)';
+    document.getElementById('user-avatar-initials').textContent = 'CF';
+    document.getElementById('inbox-title').textContent = 'Mis Solicitudes y Requerimientos Emitidos';
+    document.getElementById('cases-panel-heading').textContent = 'MIS SOLICITUDES';
+  }
 }
 
 function setupNavigation() {
+  // Selector de Espacio de Trabajo
+  document.getElementById('switch-role-selector')?.addEventListener('change', (e) => {
+    state.currentRole = e.target.value;
+    if (state.currentRole === 'CLIENTE_USUARIO') {
+      state.activeTab = 'personal';
+      state.currentUser = {
+        id: 'usr-002',
+        nombre: 'Dr. Carlos Flores Mendizábal',
+        dependencia: 'DIR-JURIDICA',
+        dependenciaNombre: 'Dirección General de Asesoría Jurídica',
+        rol: 'SOLICITANTE'
+      };
+    } else {
+      state.activeTab = 'personal';
+      state.currentUser = {
+        id: 'usr-001',
+        nombre: 'Lic. Marco Antonio Quispe',
+        dependencia: 'DIR-TECNOLOGIAS-INF',
+        dependenciaNombre: 'Dirección de Tecnologías e Información',
+        rol: 'SUPERADMIN'
+      };
+    }
+    
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('btn-inbox-personal')?.classList.add('active');
+
+    restaurarWorkspaceGrid();
+    aplicarPermisosEspacioTrabajo();
+    renderCasesList();
+    renderCaseDetail();
+    alert(`[GAMEA] Espacio de trabajo cambiado a: ${state.currentRole === 'SUPERADMIN' ? '🛡 Superadministrador' : '👤 Usuario / Cliente de Oficina (Solo Lectura y Solicitudes)'}`);
+  });
   const navItems = [
     { id: 'btn-inbox-personal', tab: 'personal', title: 'Mi Bandeja Personal (DIR-TIC)' },
     { id: 'btn-inbox-unidad', tab: 'unidad', title: 'Bandeja de Unidad — Casos Consolidados' },
@@ -241,20 +315,26 @@ function renderCasesList() {
 
   let casosFiltrados = [...state.cases];
 
-  if (state.activeTab === 'personal') {
-    casosFiltrados = casosFiltrados.filter(c => c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF');
-  } else if (state.activeTab === 'subalcaldia') {
-    casosFiltrados = casosFiltrados.filter(c => c.distrito !== null);
+  if (state.currentRole === 'CLIENTE_USUARIO') {
+    // El usuario común sólo ve los requerimientos donde él es el solicitante o de su oficina
+    casosFiltrados = casosFiltrados.filter(c => c.solicitanteId === state.currentUser.id || c.origen === state.currentUser.dependenciaNombre);
+  } else {
+    // Vista de superadministrador
+    if (state.activeTab === 'personal') {
+      casosFiltrados = casosFiltrados.filter(c => c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF');
+    } else if (state.activeTab === 'subalcaldia') {
+      casosFiltrados = casosFiltrados.filter(c => c.distrito !== null);
+    }
   }
 
-  if (state.distritoFiltro !== null) {
+  if (state.distritoFiltro !== null && state.currentRole === 'SUPERADMIN') {
     casosFiltrados = casosFiltrados.filter(c => c.distrito === state.distritoFiltro);
   }
 
   if (casosFiltrados.length === 0) {
     container.innerHTML = `
       <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.9rem;">
-        No hay requerimientos en esta bandeja.
+        ${state.currentRole === 'CLIENTE_USUARIO' ? 'No tienes solicitudes emitidas aún. Presiona "+ Nuevo Requerimiento" para generar una.' : 'No hay requerimientos en esta bandeja.'}
       </div>
     `;
     return;
@@ -339,11 +419,17 @@ function renderCaseDetail() {
             <strong>Solicitante:</strong> ${caso.solicitanteNombre} (${caso.origen})
           </div>
         </div>
+        ${state.currentRole === 'SUPERADMIN' ? `
         <div style="display: flex; gap: 0.5rem;">
           <button class="btn-accent" onclick="window.abrirModal('modal-derivar-caso')">Derivar a Subalcaldía</button>
           <button class="btn-primary" onclick="window.abrirModal('modal-nueva-novedad')">Registrar Novedad</button>
           <button class="btn-secondary" onclick="window.resolverCasoPrompt('${caso.id}')">Resolver Caso</button>
-        </div>
+        </div>` : `
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <span class="badge-tag" style="background-color: rgba(56, 189, 248, 0.2); color: var(--color-status-registrado); font-size: 0.8rem;">
+            Vista de Consulta y Seguimiento
+          </span>
+        </div>`}
       </div>
       <p style="font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.4;">
         ${caso.descripcion}
@@ -480,7 +566,14 @@ window.cerrarModales = function() {
 };
 
 window.guardarNuevoRequerimiento = function() {
-  const solicitanteId = document.getElementById('req-solicitante-select').value;
+  let solicitante;
+  if (state.currentRole === 'CLIENTE_USUARIO') {
+    solicitante = state.currentUser;
+  } else {
+    const solicitanteId = document.getElementById('req-solicitante-select').value;
+    solicitante = state.usuarios.find(u => u.id === solicitanteId) || state.currentUser;
+  }
+
   const destino = document.getElementById('req-destino-select').value;
   const prioridad = document.getElementById('req-prioridad-select').value;
   const asunto = document.getElementById('req-asunto-input').value.trim();
@@ -491,7 +584,6 @@ window.guardarNuevoRequerimiento = function() {
     return;
   }
 
-  const solicitante = state.usuarios.find(u => u.id === solicitanteId);
   const nuevoId = `CAS-2026-0${100 + state.cases.length}`;
 
   const nuevoCaso = {
