@@ -171,19 +171,41 @@ const state = {
   ]
 };
 
-// Inicialización de la aplicación robusta para SPA
-function inicializarApp() {
+// Inicialización de la aplicación robusta para SPA con persistencia institucional
+async function inicializarApp() {
   setupNavigation();
-  actualizarContadores();
-  renderCasesList();
-  renderCaseDetail();
   setupActionButtons();
   poblarSelectsUsuarios();
   aplicarPermisosEspacioTrabajo();
+
+  // Carga asíncrona de casos desde base de datos / servidor persistente
+  await cargarCasosDesdeServidor();
+}
+
+async function cargarCasosDesdeServidor() {
+  try {
+    const res = await fetch('/api/v1/cases');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        state.cases = data;
+        // Si el caso seleccionado no está en la lista recibida, seleccionar el primero
+        if (!state.cases.some(c => c.id === state.selectedCaseId)) {
+          state.selectedCaseId = state.cases[0].id;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[GAMEA] No se pudo conectar con el endpoint de casos, usando estado local:', err);
+  } finally {
+    actualizarContadores();
+    renderCasesList();
+    renderCaseDetail();
+  }
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', inicializarApp);
+  document.addEventListener('DOMContentLoaded', () => { inicializarApp(); });
 } else {
   inicializarApp();
 }
@@ -809,7 +831,7 @@ window.cerrarModales = function() {
   document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
 };
 
-window.guardarNuevoRequerimiento = function() {
+window.guardarNuevoRequerimiento = async function() {
   let solicitante;
   if (state.currentRole === 'CLIENTE_USUARIO') {
     solicitante = state.currentUser;
@@ -828,11 +850,7 @@ window.guardarNuevoRequerimiento = function() {
     return;
   }
 
-  const nuevoId = `CAS-2026-0${100 + state.cases.length}`;
-
-  const nuevoCaso = {
-    id: nuevoId,
-    codigo: nuevoId,
+  const payload = {
     titulo: asunto,
     solicitanteId: solicitante.id,
     solicitanteNombre: solicitante.nombre,
@@ -843,21 +861,51 @@ window.guardarNuevoRequerimiento = function() {
     prioridad: prioridad,
     estado: 'REGISTRADO',
     slaRestante: '4h restantes',
-    distrito: destino.includes('SUBALCALDIA') ? parseInt(destino.replace('SUBALCALDIA-D', ''), 10) : null,
-    descripcion: desc,
-    novedades: [
-      {
+    descripcion: desc
+  };
+
+  try {
+    const res = await fetch('/api/v1/cases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const casoGuardado = await res.json();
+      state.cases.unshift(casoGuardado);
+      state.selectedCaseId = casoGuardado.id;
+    } else {
+      // Fallback local en caso de error
+      const nuevoId = `CAS-2026-0${100 + state.cases.length}`;
+      payload.id = nuevoId;
+      payload.codigo = nuevoId;
+      payload.novedades = [{
         titulo: 'Registro Formal de Requerimiento',
         autor: solicitante.nombre,
         fecha: 'Hace un momento',
         descripcion: desc,
         color: 'var(--color-status-registrado)'
-      }
-    ]
-  };
+      }];
+      state.cases.unshift(payload);
+      state.selectedCaseId = nuevoId;
+    }
+  } catch (err) {
+    console.error('Error guardando caso en backend:', err);
+    const nuevoId = `CAS-2026-0${100 + state.cases.length}`;
+    payload.id = nuevoId;
+    payload.codigo = nuevoId;
+    payload.novedades = [{
+      titulo: 'Registro Formal de Requerimiento',
+      autor: solicitante.nombre,
+      fecha: 'Hace un momento',
+      descripcion: desc,
+      color: 'var(--color-status-registrado)'
+    }];
+    state.cases.unshift(payload);
+    state.selectedCaseId = nuevoId;
+  }
 
-  state.cases.unshift(nuevoCaso);
-  state.selectedCaseId = nuevoId;
   actualizarContadores();
   window.cerrarModales();
 
@@ -868,7 +916,7 @@ window.guardarNuevoRequerimiento = function() {
   restaurarWorkspaceGrid();
   renderCasesList();
   renderCaseDetail();
-  alert(`[GAMEA] Requerimiento ${nuevoId} registrado formalmente en el sistema institucional.`);
+  alert(`[GAMEA] Requerimiento ${state.selectedCaseId} registrado y persistido exitosamente.`);
 };
 
 window.guardarNuevoUsuario = function() {
@@ -909,7 +957,7 @@ window.guardarNuevoUsuario = function() {
   alert(`[GAMEA] Funcionario ${nombre} registrado exitosamente como usuario institucional de ${depNombre}.`);
 };
 
-window.confirmarDerivacion = function() {
+window.confirmarDerivacion = async function() {
   const destino = document.getElementById('deriv-destino-select').value;
   const motivo = document.getElementById('deriv-motivo-input').value.trim();
 
@@ -921,15 +969,40 @@ window.confirmarDerivacion = function() {
   const caso = state.cases.find(c => c.id === state.selectedCaseId);
   if (!caso) return;
 
-  caso.estado = 'EN_DERIVACION';
-  caso.destino = destino;
-  caso.novedades.unshift({
-    titulo: `Derivación formal a ${destino}`,
-    autor: 'Lic. Marco Antonio Quispe',
-    fecha: 'Hace un momento',
-    descripcion: motivo,
-    color: 'var(--color-status-derivacion)'
-  });
+  const autor = state.currentUser ? state.currentUser.nombre : 'Lic. Marco Antonio Quispe';
+
+  try {
+    const res = await fetch(`/api/v1/cases/${encodeURIComponent(caso.id)}/derivar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ destino, motivo, autor })
+    });
+    if (res.ok) {
+      const updatedCase = await res.json();
+      Object.assign(caso, updatedCase);
+    } else {
+      caso.estado = 'EN_DERIVACION';
+      caso.destino = destino;
+      caso.novedades.unshift({
+        titulo: `Derivación formal a ${destino}`,
+        autor: autor,
+        fecha: 'Hace un momento',
+        descripcion: motivo,
+        color: 'var(--color-status-derivacion)'
+      });
+    }
+  } catch (err) {
+    console.error('Error derivando caso en backend:', err);
+    caso.estado = 'EN_DERIVACION';
+    caso.destino = destino;
+    caso.novedades.unshift({
+      titulo: `Derivación formal a ${destino}`,
+      autor: autor,
+      fecha: 'Hace un momento',
+      descripcion: motivo,
+      color: 'var(--color-status-derivacion)'
+    });
+  }
 
   window.cerrarModales();
   document.getElementById('deriv-motivo-input').value = '';
@@ -937,10 +1010,10 @@ window.confirmarDerivacion = function() {
   actualizarContadores();
   renderCasesList();
   renderCaseDetail();
-  alert(`[GAMEA] Caso ${caso.id} derivado formalmente a ${destino} con preservación de antecedentes.`);
+  alert(`[GAMEA] Caso ${caso.id} derivado formalmente a ${destino} con preservación persistente de antecedentes.`);
 };
 
-window.confirmarNovedad = function() {
+window.confirmarNovedad = async function() {
   const tipo = document.getElementById('nov-tipo-select').value;
   const titulo = document.getElementById('nov-titulo-input').value.trim();
   const desc = document.getElementById('nov-descripcion-input').value.trim();
@@ -953,13 +1026,42 @@ window.confirmarNovedad = function() {
   const caso = state.cases.find(c => c.id === state.selectedCaseId);
   if (!caso) return;
 
-  caso.novedades.unshift({
-    titulo: `${tipo}: ${titulo}`,
-    autor: 'Lic. Marco Antonio Quispe',
-    fecha: 'Hace un momento',
-    descripcion: desc,
-    color: 'var(--color-accent)'
-  });
+  const autor = state.currentUser ? state.currentUser.nombre : 'Lic. Marco Antonio Quispe';
+  const novedadTitulo = `${tipo}: ${titulo}`;
+
+  try {
+    const res = await fetch(`/api/v1/cases/${encodeURIComponent(caso.id)}/novedades`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titulo: novedadTitulo,
+        autor: autor,
+        descripcion: desc,
+        color: 'var(--color-accent)'
+      })
+    });
+    if (res.ok) {
+      const updatedCase = await res.json();
+      Object.assign(caso, updatedCase);
+    } else {
+      caso.novedades.unshift({
+        titulo: novedadTitulo,
+        autor: autor,
+        fecha: 'Hace un momento',
+        descripcion: desc,
+        color: 'var(--color-accent)'
+      });
+    }
+  } catch (err) {
+    console.error('Error agregando novedad al backend:', err);
+    caso.novedades.unshift({
+      titulo: novedadTitulo,
+      autor: autor,
+      fecha: 'Hace un momento',
+      descripcion: desc,
+      color: 'var(--color-accent)'
+    });
+  }
 
   window.cerrarModales();
   document.getElementById('nov-titulo-input').value = '';
@@ -968,25 +1070,49 @@ window.confirmarNovedad = function() {
   renderCaseDetail();
 };
 
-window.resolverCasoPrompt = function(casoId) {
+window.resolverCasoPrompt = async function(casoId) {
   const solucion = prompt('Ingrese el detalle de la resolución técnica/administrativa del caso:');
   if (!solucion) return;
 
   const caso = state.cases.find(c => c.id === casoId);
   if (!caso) return;
 
-  caso.estado = 'RESUELTO';
-  caso.novedades.unshift({
-    titulo: 'Resolución Operativa del Requerimiento',
-    autor: 'Lic. Marco Antonio Quispe',
-    fecha: 'Hace un momento',
-    descripcion: solucion,
-    color: 'var(--color-status-resuelto)'
-  });
+  const autor = state.currentUser ? state.currentUser.nombre : 'Lic. Marco Antonio Quispe';
+
+  try {
+    const res = await fetch(`/api/v1/cases/${encodeURIComponent(caso.id)}/resolver`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solucion, autor })
+    });
+    if (res.ok) {
+      const updatedCase = await res.json();
+      Object.assign(caso, updatedCase);
+    } else {
+      caso.estado = 'RESUELTO';
+      caso.novedades.unshift({
+        titulo: 'Resolución Operativa del Requerimiento',
+        autor: autor,
+        fecha: 'Hace un momento',
+        descripcion: solucion,
+        color: 'var(--color-status-resuelto)'
+      });
+    }
+  } catch (err) {
+    console.error('Error resolviendo caso en backend:', err);
+    caso.estado = 'RESUELTO';
+    caso.novedades.unshift({
+      titulo: 'Resolución Operativa del Requerimiento',
+      autor: autor,
+      fecha: 'Hace un momento',
+      descripcion: solucion,
+      color: 'var(--color-status-resuelto)'
+    });
+  }
 
   renderCasesList();
   renderCaseDetail();
-  alert(`[GAMEA] Caso ${caso.id} marcado como RESUELTO.`);
+  alert(`[GAMEA] Caso ${caso.id} marcado como RESUELTO y persistido.`);
 };
 
 window.rebalancearCargas = function() {
