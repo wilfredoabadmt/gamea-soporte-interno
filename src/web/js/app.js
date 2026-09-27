@@ -217,7 +217,11 @@ function actualizarContadores() {
   const cSupervision = document.getElementById('count-supervision');
   const cUsuarios = document.getElementById('count-usuarios');
 
-  const personalCasos = state.cases.filter(c => c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF').length;
+  const personalCasos = state.cases.filter(c => 
+    c.dependenciaActualId === 'JEFATURA-SISTEMAS' || 
+    c.dependenciaActualId === 'DIR-TECNOLOGIAS-INF' ||
+    (c.destino && (c.destino.includes('SISTEMAS') || c.destino.includes('TECNOLOGIAS')))
+  ).length;
   const subalcaldiaCasos = state.cases.filter(c => c.distrito !== null).length;
   const urgentes = state.cases.filter(c => c.prioridad === 'URGENTE' || c.prioridad === 'ALTA').length;
 
@@ -453,21 +457,28 @@ function renderCaseDetail() {
     return;
   }
 
-  const timelineHtml = caso.novedades.map(nov => `
-    <div class="timeline-item">
-      <div class="timeline-dot" style="background-color: ${nov.color};"></div>
-      <div class="timeline-content">
-        <div class="timeline-header">
-          <span style="font-weight: 600; color: ${nov.color};">${nov.titulo}</span>
-          <span>${nov.fecha}</span>
+  const timelineHtml = Array.isArray(caso.novedades) ? caso.novedades.map(nov => {
+    const color = nov.color || 'var(--color-accent)';
+    const titulo = nov.titulo || 'Registro Operativo';
+    const fecha = nov.fecha || 'Reciente';
+    const desc = nov.descripcion || '';
+    const autor = nov.autor || 'Funcionario GAMEA';
+    return `
+      <div class="timeline-item">
+        <div class="timeline-dot" style="background-color: ${color};"></div>
+        <div class="timeline-content">
+          <div class="timeline-header">
+            <span style="font-weight: 600; color: ${color};">${titulo}</span>
+            <span>${fecha}</span>
+          </div>
+          <p style="font-size: 0.88rem;">${desc}</p>
+          <span style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.5rem; display: block;">
+            Autor: ${autor}
+          </span>
         </div>
-        <p style="font-size: 0.88rem;">${nov.descripcion}</p>
-        <span style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.5rem; display: block;">
-          Autor: ${nov.autor}
-        </span>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('') : '';
 
   container.innerHTML = `
     <div class="detail-header">
@@ -837,91 +848,109 @@ window.cerrarModales = function() {
 };
 
 window.guardarNuevoRequerimiento = async function() {
-  let solicitante;
-  if (state.currentRole === 'CLIENTE_USUARIO') {
-    solicitante = state.currentUser;
-  } else {
-    const solicitanteId = document.getElementById('req-solicitante-select').value;
-    solicitante = state.usuarios.find(u => u.id === solicitanteId) || state.currentUser;
-  }
-
-  const destino = document.getElementById('req-destino-select').value;
-  const prioridad = document.getElementById('req-prioridad-select').value;
-  const asunto = document.getElementById('req-asunto-input').value.trim();
-  const desc = document.getElementById('req-descripcion-input').value.trim();
-
-  if (!asunto || !desc) {
-    alert('Por favor ingrese el asunto y la descripción del requerimiento institucional.');
-    return;
-  }
-
-  const payload = {
-    titulo: asunto,
-    solicitanteId: solicitante.id,
-    solicitanteNombre: solicitante.nombre,
-    origen: solicitante.dependenciaNombre,
-    destino: destino,
-    dependenciaActualId: destino,
-    responsable: 'Sin Asignar (Bandeja de Entrada)',
-    prioridad: prioridad,
-    estado: 'REGISTRADO',
-    slaRestante: '4h restantes',
-    descripcion: desc
-  };
-
   try {
-    const res = await fetch('/api/v1/cases', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    let solicitante = state.currentUser;
+    const reqSelect = document.getElementById('req-solicitante-select');
+    if (state.currentRole === 'SUPERADMIN' && reqSelect && reqSelect.value) {
+      const match = state.usuarios.find(u => u.id === reqSelect.value);
+      if (match) solicitante = match;
+    }
 
-    if (res.ok) {
-      const casoGuardado = await res.json();
-      state.cases.unshift(casoGuardado);
-      state.selectedCaseId = casoGuardado.id;
-    } else {
-      // Fallback local en caso de error
+    const destinoEl = document.getElementById('req-destino-select');
+    const prioridadEl = document.getElementById('req-prioridad-select');
+    const asuntoEl = document.getElementById('req-asunto-input');
+    const descEl = document.getElementById('req-descripcion-input');
+
+    const destino = destinoEl ? destinoEl.value : 'JEFATURA-SISTEMAS';
+    const prioridad = prioridadEl ? prioridadEl.value : 'MEDIA';
+    const asunto = asuntoEl ? asuntoEl.value.trim() : '';
+    const desc = descEl ? descEl.value.trim() : '';
+
+    if (!asunto || !desc) {
+      alert('Por favor ingrese el asunto y la descripción del requerimiento.');
+      return;
+    }
+
+    const payload = {
+      titulo: asunto,
+      solicitanteId: solicitante.id || 'usr-solicitante',
+      solicitanteNombre: solicitante.nombre || 'Servidor Público',
+      origen: solicitante.dependenciaNombre || 'Oficina Solicitante',
+      destino: destino,
+      dependenciaActualId: destino,
+      responsable: 'Sin Asignar (Bandeja de Entrada)',
+      prioridad: prioridad,
+      estado: 'REGISTRADO',
+      slaRestante: '4h restantes',
+      descripcion: desc
+    };
+
+    let casoCreado = null;
+    try {
+      const res = await fetch('/api/v1/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        casoCreado = await res.json();
+      }
+    } catch (e) {
+      console.warn('[GAMEA] No se pudo conectar al endpoint directo, usando asignador interno:', e);
+    }
+
+    if (!casoCreado) {
       const nuevoId = `CAS-2026-0${100 + state.cases.length}`;
-      payload.id = nuevoId;
-      payload.codigo = nuevoId;
-      payload.novedades = [{
+      casoCreado = {
+        ...payload,
+        id: nuevoId,
+        codigo: nuevoId,
+        novedades: [{
+          titulo: 'Registro Formal de Requerimiento',
+          autor: solicitante.nombre || 'Servidor Público',
+          fecha: 'Hace un momento',
+          descripcion: desc,
+          color: 'var(--color-status-registrado)'
+        }]
+      };
+    }
+
+    // Asegurar que novedades y color estén definidos
+    if (!Array.isArray(casoCreado.novedades) || casoCreado.novedades.length === 0) {
+      casoCreado.novedades = [{
         titulo: 'Registro Formal de Requerimiento',
-        autor: solicitante.nombre,
+        autor: solicitante.nombre || 'Servidor Público',
         fecha: 'Hace un momento',
         descripcion: desc,
         color: 'var(--color-status-registrado)'
       }];
-      state.cases.unshift(payload);
-      state.selectedCaseId = nuevoId;
     }
-  } catch (err) {
-    console.error('Error guardando caso en backend:', err);
-    const nuevoId = `CAS-2026-0${100 + state.cases.length}`;
-    payload.id = nuevoId;
-    payload.codigo = nuevoId;
-    payload.novedades = [{
-      titulo: 'Registro Formal de Requerimiento',
-      autor: solicitante.nombre,
-      fecha: 'Hace un momento',
-      descripcion: desc,
-      color: 'var(--color-status-registrado)'
-    }];
-    state.cases.unshift(payload);
-    state.selectedCaseId = nuevoId;
+    casoCreado.novedades.forEach(n => {
+      if (!n.color) n.color = 'var(--color-status-registrado)';
+    });
+
+    state.cases.unshift(casoCreado);
+    state.selectedCaseId = casoCreado.id;
+
+    // Cerrar modal y limpiar campos
+    window.cerrarModales();
+    if (asuntoEl) asuntoEl.value = '';
+    if (descEl) descEl.value = '';
+
+    // Si estamos en una pestaña distinta a personal o unidad, restaurar para ver el nuevo caso
+    restaurarWorkspaceGrid();
+    actualizarContadores();
+    renderCasesList();
+    renderCaseDetail();
+
+    alert(`[GAMEA] Requerimiento ${casoCreado.id} registrado y guardado exitosamente.`);
+  } catch (globalErr) {
+    console.error('[GAMEA] Error en formulario de requerimiento:', globalErr);
+    alert('Ocurrió un inconveniente al procesar el formulario. Se ha recuperado la sesión.');
+    window.cerrarModales();
+    renderCasesList();
+    renderCaseDetail();
   }
-
-  actualizarContadores();
-  window.cerrarModales();
-
-  // Limpiar formulario
-  document.getElementById('req-asunto-input').value = '';
-  document.getElementById('req-descripcion-input').value = '';
-
-  restaurarWorkspaceGrid();
-  renderCasesList();
-  renderCaseDetail();
-  alert(`[GAMEA] Requerimiento ${state.selectedCaseId} registrado y persistido exitosamente.`);
 };
 
 window.guardarNuevoUsuario = function() {
